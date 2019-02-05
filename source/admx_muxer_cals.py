@@ -97,6 +97,13 @@ def x76775(resistance):
     return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
 _all_calibrations.append(x76775)
 
+def x89346_2wirep2(resistance):
+    '''Calibration for a cernox'''
+    values_x = [371.03973388672, 765., 848.89422607422, 6110.41015625, 4243.]
+    values_y = [293., 70., 35., 5.5, 4.2]
+    return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
+_all_calibrations.append(x89346_2wirep2)
+
 
 # RuOx sensors
 def RuOx202a(resistance):
@@ -119,14 +126,14 @@ def magnet_t2p2(resistance):
     values_x = [4.2, 50., 150.]
     values_y = [1346.27, 240.923, 62.171]
     return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
-_all_calibrations.append(magnet_t1p2)
+_all_calibrations.append(magnet_t2p2)
 
 def magnet_t3p2(resistance):
     '''Calibration for a cernox'''
     values_x = [4.21, 50., 150.]
     values_y = [1495., 225.333, 62.59]
     return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
-_all_calibrations.append(magnet_t1p2)
+_all_calibrations.append(magnet_t3p2)
 
 
 # Hall Probe
