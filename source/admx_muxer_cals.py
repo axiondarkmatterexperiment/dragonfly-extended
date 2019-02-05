@@ -61,6 +61,20 @@ def x76779p2(resistance):
     return piecewise_cal(values_x, values_y, resistance, log_x=True, log_y=True)
 _all_calibrations.append(x76779p2)
 
+def x41840(resistance):
+    '''Calibration for a cernox'''
+    values_x = [58.8, 243., 5104.]
+    values_y = [305., 77., 4.2]
+    return piecewise_cal(values_x, values_y, resistance, log_x=True, log_y=True)
+_all_calibrations.append(x41840)
+
+def x41849(resistance):
+    '''Calibration for a cernox'''
+    values_x = [53.4, 215., 4337.]
+    values_y = [305., 77., 4.2]
+    return piecewise_cal(values_x, values_y, resistance, log_x=True, log_y=True)
+_all_calibrations.append(x41849)
+
 # RuOx sensors
 def RuOx202a(resistance):
     '''Calibration for a RuOx'''
@@ -68,6 +82,15 @@ def RuOx202a(resistance):
     values_y = [305.0, 77.0, 40.0, 39.0, 38.0, 37.0, 36.0, 35.0, 34.0, 33.0, 32.0, 31.0, 30.0, 29.0, 28.0, 27.0, 26.0, 25.0, 24.0, 23.0, 22.0, 21.0, 20.0, 19.5, 19.0, 18.5, 18.0, 17.5, 17.0, 16.5, 16.0, 15.5, 15.0, 14.5, 14.0, 13.5, 13.0, 12.5, 12.0, 11.5, 11.0, 10.5, 10.0, 9.5, 9.0, 8.5, 8.0, 7.5, 7.0, 6.5, 6.0, 5.8, 5.6, 5.5, 5.4, 5.2, 5.0, 4.8, 4.6, 4.4, 4.2, 4.0, 3.9, 3.8, 3.7, 3.6, 3.5, 3.4, 3.3, 3.2, 3.1, 3.0, 2.9, 2.8, 2.7, 2.6, 2.5, 2.4, 2.3, 2.2, 2.1, 2.0, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2, 1.15, 1.1, 1.05, 1.0, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.48, 0.46, 0.44, 0.42, 0.4, 0.38, 0.36, 0.34, 0.32, 0.3, 0.29, 0.28, 0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21, 0.2, 0.19, 0.18, 0.17, 0.16, 0.15, 0.14, 0.13, 0.12, 0.11, 0.1, 0.095, 0.09, 0.085, 0.08, 0.075, 0.07, 0.065, 0.06, 0.055, 0.05]
     return piecewise_cal(values_x, values_y, resistance, log_x=True, log_y=True)
 _all_calibrations.append(RuOx202a)
+
+# Hall Probe
+def HGCA3020(resistance):
+    '''Calibration for a Hall Probe'''
+    values_x = [-0.02895958, -0.01930098, -0.00964152, 0., 0.00963079, 0.01929507, 0.02898745]
+    values_y = [-30., -20., -10., 0., 10., 20., 30]
+    return piecewise_cal(values_x, values_y, resistance)
+_all_calibrations.append(HGCA3020)
+
 
 class ADMXMuxGetSpime(dragonfly.implementations.MuxerGetSpime):
     @calibrate(_all_calibrations)
