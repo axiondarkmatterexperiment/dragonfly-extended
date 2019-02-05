@@ -75,6 +75,28 @@ def x41849(resistance):
     return piecewise_cal(values_x, values_y, resistance, log_x=True, log_y=True)
 _all_calibrations.append(x41849)
 
+def x76868(resistance):
+    '''Calibration for a cernox'''
+    values_x = [44.4499, 107.207, 588.164, 1878.75]
+    values_y = [305., 77.35, 4.2, 1.29997]
+    return piecewise_cal(values_x, values_y, resistance, log_x=True, log_y=True)
+_all_calibrations.append(x76868)
+
+def x76774(resistance):
+    '''Calibration for a cernox'''
+    values_x = [73.2, 246., 2790., 11779.]
+    values_y = [305., 77., 4.2, 1.3]
+    return piecewise_cal(values_x, values_y, resistance, log_x=True, log_y=True)
+_all_calibrations.append(x76774)
+
+def x76775(resistance):
+    '''Calibration for a cernox'''
+    values_x = [71.9, 239., 2585., 10822.]
+    values_y = [305., 77., 4.2, 1.3]
+    return piecewise_cal(values_x, values_y, resistance, log_x=True, log_y=True)
+_all_calibrations.append(x76775)
+
+
 # RuOx sensors
 def RuOx202a(resistance):
     '''Calibration for a RuOx'''
