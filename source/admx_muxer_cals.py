@@ -217,6 +217,29 @@ def HGCT3020(resistance):
     return piecewise_cal(values_x, values_y, resistance)
 _all_calibrations.append(HGCT3020)
 
+# Flow Meters
+def flow_meter_1k_pot(volts):
+    '''Calibration for a 1k pot flow meter'''
+    values_x = [0.0, 2.5, 5.0]
+    values_y = [0.0, 1.811, 3.622]
+    return piecewise_cal(values_x, values_y, volts)
+_all_calibrations.append(flow_meter_1k_pot)
+
+def flow_meter_main_magnet(volts):
+    '''Calibration for a 1k pot flow meter'''
+    values_x = [0.0, 2.5, 5.0]
+    values_y = [0.0, 18.11, 36.22]
+    return piecewise_cal(values_x, values_y, volts)
+_all_calibrations.append(flow_meter_main_magnet)
+
+def flow_meter_insert(volts):
+    '''Calibration for a 1k pot flow meter'''
+    values_x = [0.0, 2.5, 5.0]
+    values_y = [0.0, 9.055, 18.11]
+    return piecewise_cal(values_x, values_y, volts)
+_all_calibrations.append(flow_meter_insert)
+
+# Muxer spime
 class ADMXMuxGetSpime(dragonfly.implementations.MuxerGetSpime):
     @calibrate(_all_calibrations)
     def on_get(self):
