@@ -23,9 +23,13 @@ def piecewise_cal(values_x, values_y, this_x, log_x=False, log_y=False):
     try:
         high_index = [i>this_x for i in values_x].index(True)
     except ValueError:
-        raise dripline.core.DriplineValueError("raw value is likely above calibration range")
+        high_index = -1
+        logger.warning("raw value is above the calibration range, extrapolating")
+        #raise dripline.core.DriplineValueError("raw value is likely above calibration range")
     if high_index == 0:
-        raise dripline.core.DriplineValueError("raw value is below calibration range")
+        high_index = 1
+        logger.warning("raw value is below the calibration range, extrapolating")
+        #raise dripline.core.DriplineValueError("raw value is below calibration range")
     m = (values_y[high_index] - values_y[high_index - 1]) / (values_x[high_index] - values_x[high_index - 1])
     to_return = values_y[high_index - 1] + m * (this_x - values_x[high_index - 1])
     if log_y:
