@@ -14,11 +14,11 @@ _all_calibrations = []
 #log-lin is log(y)
 def piecewise_cal(values_x, values_y, this_x, log_x=False, log_y=False):
     if log_x:
-        logger.info("doing log x cal")
+        logger.debug("doing log x cal")
         values_x = [math.log(x) for x in values_x]
         this_x = math.log(this_x)
     if log_y:
-        logger.info("doing log y cal")
+        logger.debug("doing log y cal")
         values_y = [math.log(y) for y in values_y]
     try:
         high_index = [i>this_x for i in values_x].index(True)
