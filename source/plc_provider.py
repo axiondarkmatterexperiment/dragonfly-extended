@@ -12,6 +12,39 @@ from dripline.core import calibrate, Provider, Spime
 import logging
 logger = logging.getLogger('dragonfly.custom')
 
+## base calibration function... this should live somewhere common...
+#lin-log is log(x)
+#log-lin is log(y)
+def piecewise_cal(values_x, values_y, this_x, log_x=False, log_y=False):
+    if log_x:
+        logger.debug("doing log x cal")
+        values_x = [math.log(x) for x in values_x]
+        this_x = math.log(this_x)
+    if log_y:
+        logger.debug("doing log y cal")
+        values_y = [math.log(y) for y in values_y]
+    try:
+        high_index = [i>this_x for i in values_x].index(True)
+    except ValueError:
+        high_index = -1
+        logger.warning("raw value is above the calibration range, extrapolating")
+        #raise dripline.core.DriplineValueError("raw value is likely above calibration range")
+    if high_index == 0:
+        high_index = 1
+        logger.warning("raw value is below the calibration range, extrapolating")
+        #raise dripline.core.DriplineValueError("raw value is below calibration range")
+    m = (values_y[high_index] - values_y[high_index - 1]) / (values_x[high_index] - values_x[high_index - 1])
+    to_return = values_y[high_index - 1] + m * (this_x - values_x[high_index - 1])
+    if log_y:
+        to_return = math.exp(to_return)
+    return to_return
+
+def mother_dewar_lhe(fraction):
+    ''' converts linear position along the sensor to liquid liters of He '''
+    values_x = [0., 1., 3., 5., 6., 8., 10., 12., 13., 15., 17., 18., 20., 22., 24., 25., 27., 29., 31., 32., 34., 36., 37., 39., 41., 43., 44., 46., 48., 50., 51., 53., 55., 56., 58., 60., 62., 63., 65., 67., 68., 70., 72., 74., 75., 77., 79., 81., 82., 84., 86., 87., 89., 91., 93., 94., 96., 98., 100.]
+    values_y = [0., 2.17080717038854, 8.61458655758931, 19.228374975655, 33.9092092386384, 52.5541261605922, 75.060162555569, 101.324355237622, 131.243741020803, 164.715356719165, 201.636239146762, 241.903425117645, 285.413951445867, 332.064854945482, 381.753172430541, 434.375940715098, 489.830196613206, 548.012976938916, 607.525698416445, 667.038419893975, 726.551141371504, 786.063862849033, 845.576584326563, 905.089305804092, 964.602027281621, 1024.11474875915, 1083.62747023668, 1143.14019171421, 1202.65291319174, 1262.16563466927, 1321.6783561468, 1381.19107762433, 1440.70379910186, 1500.21652057939, 1559.72924205691, 1619.24196353444, 1678.75468501197, 1738.2674064895, 1797.78012796703, 1857.29284944456, 1916.80557092209, 1976.31829239962, 2034.50107272533, 2089.95532862344, 2142.57809690799, 2192.26641439305, 2238.91731789267, 2282.42784422089, 2322.69503019177, 2359.61591261937, 2393.08752831773, 2423.00691410091, 2449.27110678297, 2471.77714317794, 2490.4220600999, 2505.10289436288, 2515.71668278095, 2522.16046216815, 2524.33126933854]
+    return piecewise_cal(values_x, values_y, fraction)
+
 class modbus_provider(Provider):
     def __init__(self,
                  modbus_host=None,
@@ -36,7 +69,7 @@ class plc_value(Spime):
         self.register = register
         self.n_registers = n_registers
 
-    @calibrate()
+    @calibrate([mother_dewar_lhe])
     def on_get(self):
         raw_bits_data = self.provider.read_holding(self.register, self.n_registers)
         logger.debug('raw bits are: ', raw_bits_data)
