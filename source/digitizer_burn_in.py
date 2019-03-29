@@ -36,7 +36,8 @@ while True:
     insert_result = interface.cmd("spectrum_table", "do_insert", **{"notes":"starting a burn-in test run", 'timestamp': datetime.datetime.utcnow().isoformat()+'+00'})
     print("the new run_id *should* be [{}]".format(insert_result['payload']['digitizer_log_id']))
     run_data['run_id'] = insert_result['payload']['digitizer_log_id']
-    this_filename = "/data/{}.egg".format(run_data['run_id'])
+    #this_filename = "/data/{}.egg".format(run_data['run_id'])
+    this_filename = "/{}.egg".format(run_data['run_id'])
     print("{} - starting run number {}".format(datetime.datetime.now(), run_data['run_id']))
     interface.cmd('psyllid', 'start-run', duration=0, filename=this_filename, description=json.dumps(run_data))
     time.sleep(5)

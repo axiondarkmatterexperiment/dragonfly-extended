@@ -51,7 +51,7 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
         ### Get the sensor name
         sensor_name = None
         if '.' in basic_deliver.routing_key:
-            re_out = re.match(r'sensor_value.(?P<from>\S+)', basic_deliver.routing_key)
+            re_out = re.match(r'spectra.(?P<from>\S+)', basic_deliver.routing_key)
             sensor_name = re_out.groupdict()['from']
         # note that the following is deprecated in dripline 2.x, retained for compatibility
         else:
