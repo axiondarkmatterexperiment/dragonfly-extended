@@ -6,11 +6,10 @@ import time
 
 import dripline
 
-interface = dripline.core.Interface("rabbit_broker", "burn-in-requester")
+interface = dripline.core.Interface("tpnotc.admx", "burn-in-requester")
 
 # run_data are json-encoded and passed to fast_daq as the run's "description"
 run_data = {
-            "flux_cap": 7.2,
             "run_id": '?',
             "notes": "completed a burn-in test run",
            }
