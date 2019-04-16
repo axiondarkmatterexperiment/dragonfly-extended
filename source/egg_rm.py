@@ -14,7 +14,7 @@ def do_cleanup(num_to_keep, glob_arg):
 
 if __name__ == '__main__':
     num_to_keep = 10
-    glob_arg = '/data/*.egg'
+    glob_arg = '/pod_data/*.egg'
     while True:
         do_cleanup(num_to_keep, glob_arg)
         time.sleep(20)
