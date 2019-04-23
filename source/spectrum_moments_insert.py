@@ -1,5 +1,5 @@
 '''
-A service fo interfacing with the DAQ DB (the run table in particular)
+A service for computing statistical moments of spectra, and logging to the doubles table
 
 Note: services using this module will require sqlalchemy (and assuming we're still using postgresql, psycopg2 as the sqlalchemy backend)
 '''
@@ -20,6 +20,7 @@ except ImportError:
     pass
 from datetime import datetime
 from itertools import groupby
+import numpy
 import collections
 import six
 
@@ -29,7 +30,6 @@ from dripline.core.exceptions import *
 from dragonfly.implementations import SQLTable
 
 import logging
-#logger = logging.getLogger(__name__)
 logger = logging.getLogger('dragonfly.implementations.custom')
 logger.setLevel(logging.DEBUG)
 
@@ -37,36 +37,44 @@ __all__.append("UpsertTable")
 
 
 @fancy_doc
-class UpsertTable(SQLTable):
+class SpectrumMomentsInsert(SQLTable):
     '''
     A class for making calls to _insert_with_return
     '''
     def __init__(self,
+                 conditional_insert_field,
+                 spectrum_field,
+                 sensor_name_mean,
+                 sensor_name_std,
                  do_upsert=False,
-                 ignore_keys=[],
                  *args,
                 **kwargs):
         '''
         do_upsert (bool): indicates if conflicting inserts should then update
-        ignore_keys (list of strings): list of names of payload keys which should not be mapped to columns on an insert, even if present
+        conditional_insert_field (string): name of an input kwarg field on inserts to cast to bool and determine if a log should be inserted
+                                           default is true if the field is missing
+        spectrum_field (string): name of an input kwarg field on inserts which contains an iterable of values for which moments will be calculated
+        sensor_name_mean (string): name of the sensor to log with the mean of the spectrum
+        sensor_name_std (string): name of the sensor to log with the STD of the spectrum
         '''
         if not 'sqlalchemy' in globals():
             raise ImportError('SQLAlchemy not found, required for SQLTable class')
-        self.ignore_keys = ignore_keys
+        self.conditional_insert_field = conditional_insert_field
+        self.spectrum_field = spectrum_field
+        self.sensor_name_mean = sensor_name_mean
+        self.sensor_name_std = sensor_name_std
         Endpoint.__init__(self, *args, **kwargs)
         SQLTable.__init__(self, *args, **kwargs)
         self.do_upsert = do_upsert
 
     def _insert_with_return(self, insert_kv_dict, return_col_names_list):
         try:
-            #ins = self.table.insert().values(**insert_kv_dict)
             ins = sqlalchemy.dialects.postgresql.insert(self.table).values(**insert_kv_dict)
             if return_col_names_list:
                 logger.debug('adding return clause')
                 ins = ins.returning(*[self.table.c[col_name] for col_name in return_col_names_list])
             if self.do_upsert:
                 p_keys = [key.name for key in sqlalchemy.inspection.inspect(self.table).primary_key]
-                #update_d = {c.name:c for c in ins.excluded if not c.primary_key}
                 update_d = {k:v for k,v in insert_kv_dict.items() if not k in p_keys}
                 ins = ins.on_conflict_do_update(index_elements=p_keys, set_=update_d)
             insert_result = ins.execute()
@@ -86,12 +94,24 @@ class UpsertTable(SQLTable):
     def do_insert(self, *args, **kwargs):
         '''
         '''
-        kwargs = {k:v for k,v in kwargs.items() if not k in self.ignore_keys}
-        if kwargs.get('suppress_power_measurement', False):
+        if kwargs.pop(self.conditional_insert_field, False):
             logger.info("not logging because power_measurement suppressed")
             return
-        else
-            kwargs.pop('suppress_power_measurement')
-        print("should insert {}".format(kwargs))
-        #return SQLTable.do_insert(self, *args, **kwargs)
+        the_spectrum = kwargs.pop(self.spectrum_field)
+        this_mean = numpy.mean(the_spectrum)
+        this_std = numpy.std(the_spectrum)
+        logger.info("other keys are: {}".format(kwargs.keys()))
+        logger.info("timestamp: {}".format(kwargs['timestamp']))
+        logger.info("computed a mean of: {}".format(this_mean))
+        logger.info("computed an std of: {}".format(this_std))
+        SQLTable.do_insert(self, *args, **{'timestamp': kwargs['timestamp'],
+                                         'sensor_name': self.sensor_name_mean,
+                                         'raw_value': this_mean,
+                                         'calibrated_value': this_mean,
+                                        })
+        SQLTable.do_insert(self, *args, **{'timestamp': kwargs['timestamp'],
+                                         'sensor_name': self.sensor_name_std,
+                                         'raw_value': this_std,
+                                         'calibrated_value': this_std,
+                                        })
 
