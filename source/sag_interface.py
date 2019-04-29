@@ -11,7 +11,7 @@ class SAGCoordinator(dripline.core.Endpoint):
     Coordinated interactions with all instruments within the broader sag system.
     Provides a single point of contact and uniform interface to the SAG.
     '''
-    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, switch_endpoint=None,**kwargs):
+    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, switch_endpoint=None, extra_logs_list=[], **kwargs):
         '''
         enable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to be ready to start output of a signal
         disable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to not produce any output
@@ -24,6 +24,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.disable_output_sets = disable_output_sets
         self.sag_injection_sets = sag_injection_sets
         self.switch_endpoint = switch_endpoint
+        self.extra_logs_list = extra_logs_list
 
         self.evaluator = asteval.Interpreter()
 
@@ -51,7 +52,17 @@ class SAGCoordinator(dripline.core.Endpoint):
             #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
             self.provider.set(this_endpoint, this_value)
 
+    def _do_log_noset_sensors(self):
+        '''
+        Send a scheduled_action (log) command to configured list of sensors (this is for making sure we log everything
+        that should be recorded on each injection, but which is not already/automatically logged by a log_on_set action)
+        '''
+        logger.info('triggering logging of the following sensors: {}'.format(self.extra_logs_list))
+        for a_sensor in self.extra_logs_list:
+            self.provider.cmd(a_sensor, 'scheduled_action')
+
     def update_state(self, new_state):
+        self._do_log_noset_sensors()
         if new_state is 'term':
             self.do_disable_output_sets()
             self.provider.set(self.switch_endpoint, "term")
