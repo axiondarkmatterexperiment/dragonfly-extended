@@ -11,12 +11,15 @@ class SAGCoordinator(dripline.core.Endpoint):
     Coordinated interactions with all instruments within the broader sag system.
     Provides a single point of contact and uniform interface to the SAG.
     '''
-    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, switch_endpoint=None, extra_logs_list=[], **kwargs):
+    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, **kwargs):
         '''
         enable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to be ready to start output of a signal
         disable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to not produce any output
         sag_injection_sets: (list) - a sequence of endpoints to set to create a particular injection; configuration determined from asteval of input values
         switch_endpoint: (string) - name of the endpoint used for switching the signal path into the weak port
+        extra_logs: (list) - list of endpoint names to cmd `scheduled_action` (to trigger a log) whenever the SAG is configured
+        state_extra_logs: (dict) - dict with keys being valid switch_endpoint states (string) and values being a list of extra sensors to log when entering that state.
+
         '''
         dripline.core.Endpoint.__init__(self, **kwargs)
 
@@ -24,7 +27,8 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.disable_output_sets = disable_output_sets
         self.sag_injection_sets = sag_injection_sets
         self.switch_endpoint = switch_endpoint
-        self.extra_logs_list = extra_logs_list
+        self.extra_logs = extra_logs
+        self.state_extra_logs = state_extra_logs
 
         self.evaluator = asteval.Interpreter()
 
@@ -52,17 +56,25 @@ class SAGCoordinator(dripline.core.Endpoint):
             #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
             self.provider.set(this_endpoint, this_value)
 
-    def _do_log_noset_sensors(self):
+    #def _do_log_noset_sensors(self):
+    def _do_extra_logs(self, sensors_list):
         '''
         Send a scheduled_action (log) command to configured list of sensors (this is for making sure we log everything
         that should be recorded on each injection, but which is not already/automatically logged by a log_on_set action)
         '''
-        logger.info('triggering logging of the following sensors: {}'.format(self.extra_logs_list))
-        for a_sensor in self.extra_logs_list:
+        logger.info('triggering logging of the following sensors: {}'.format(sensors_list))
+        for a_sensor in sensors_list:
             self.provider.cmd(a_sensor, 'scheduled_action')
 
     def update_state(self, new_state):
-        self._do_log_noset_sensors()
+        # do universal extra logs
+        self._do_extra_logs(self.extra_logs)
+        # do state-specific extra logs
+        if new_state in self.state_extra_logs:
+            self._do_extra_logs(self.state_extra_logs[new_state])
+        else:
+            logger.warning('state <{}> does not have a state-specific extra logs list, please create one (it may be empty)'.format(new_state))
+        # actually set to the new state
         if new_state is 'term':
             self.do_disable_output_sets()
             self.provider.set(self.switch_endpoint, "term")
@@ -72,8 +84,6 @@ class SAGCoordinator(dripline.core.Endpoint):
         elif new_state is 'vna':
             # set the switch
             self.provider.set(self.switch_endpoint, "vna")
-            # make a power measurement
-            self.provider.cmd(self.sag_power_endpoint, "scheduled_action")
             # disable outputs
             self.do_disable_output_sets()
         elif new_state is 'locking':
