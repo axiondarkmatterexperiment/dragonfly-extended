@@ -43,10 +43,12 @@ class SAGCoordinator(dripline.core.Endpoint):
                 raise dripline.core.DriplineValueError('all calculated sets must be a single entry dict')
             this_endpoint,set_str = a_calculated_set.items()[0]
             logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
-            try:
-                this_set = set_str.format(**values)
-            except KeyError as e:
-                raise dripline.core.DriplineValueError("required parameter, <{}>, not provided".format(e.message))
+            this_set = set_str
+            if '{' in set_str and '}' in set_str:
+                try:
+                    this_set = set_str.format(**values)
+                except KeyError as e:
+                    raise dripline.core.DriplineValueError("required parameter, <{}>, not provided".format(e.message))
             logger.debug('substitutions make that RHS = {}'.format(this_set))
             this_value = self.evaluator(this_set)
             logger.debug('or a set value of {}'.format(this_value))
