@@ -1,19 +1,8 @@
 import math
-from dripline.core import calibrate
-from dripline.core import Spime
-import dripline
-import dragonfly
-import yaml
 import numpy as np
 import cmath
 from scipy.optimize import least_squares
-#
-
-
-import logging
-logger = logging.getLogger('dragonfly.implementations.custom')
-
-_all_calibrations = []
+#import scipy.optimize
 
 
 def iq_packed2powers(iq_data):
@@ -22,7 +11,6 @@ def iq_packed2powers(iq_data):
     for i in range(int(len(iq_data)/2)):
         powers[i]=iq_data[2*i]*iq_data[2*i]+iq_data[2*i+1]*iq_data[2*i+1]
     return powers
-
 
 def unpack_iq_data(iq_data):
     """takes iq data in [r,i,r,i,r,i] format and unpacks into two arrays [r,r,r],[i,i,i]"""
@@ -45,12 +33,13 @@ def transmission_power_shape(f,norm,f0,Q,noise):
 def reflection_iq_shape(f,norm,phase,f0,Q,beta,delay_time):
     """returns the expected [i,q] values from a reflection measurement
         """
-#beta=2*atan(beta)/3.14159+1.0 only if we have trouble keeping beta within bounds
+#beta=2*atan(beta)/3.14159+1.0
     delta=Q*(f-f0)/f0
     denom=1/(1+4*delta*delta)
     response=complex(denom*((beta-1)-4*delta*delta),-denom*2*beta*delta)
     phase=cmath.exp(complex(0,phase+delay_time*(f-f0)))
     return response*phase
+#return [norm*(my_r*math.cos(phase)+my_i*math.sin(phase)),norm*(-my_r*math.sin(phase)+my_i*math.cos(phase))]
 
 
 def fit_transmission(powers,frequencies):
@@ -67,15 +56,17 @@ def fit_transmission(powers,frequencies):
     if len(frequencies)<16:
         raise ValueError("not enough points to fit transmission, need 16, got {}".format(len(powers)))
 
-    f0_guess=frequencies[int(math.floor(len(frequencies)/2))]
+    f0_guess=frequencies[math.floor(len(frequencies)/2)]
     f_band=frequencies[-1]-frequencies[0]
     norm_guess=max(powers)
     Q_min=f0_guess/f_band
     Q_max=20*Q_min
     Q_guess=0.5*(Q_max+Q_min)
     ten_percent_mark=int(math.ceil(0.1*len(frequencies)))
-    noise_guess=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm_guess
+#print("ten percent mark is {}".format(ten_percent_mark))
+    noise_guess=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm
     uncertainty=0.5*(np.std(powers[0:ten_percent_mark]+np.std(powers[len(powers)-ten_percent_mark:len(powers)])))
+#print("uncertainty is {}".format(uncertainty))
     norm_guess=max(powers)-noise_guess
     p0=[norm_guess,f0_guess,Q_guess,noise_guess]
     def fit_fcn(x):
@@ -86,9 +77,10 @@ def fit_transmission(powers,frequencies):
         f0=x[1]
         Q=x[2]
         noise=x[3]
+#print("state {} {} {} {}".format(norm,f0,Q,noise))
         resid=np.zeros(nfreq+npriors)
         #add priors
-        #Prior 1: frequency must be within bounds
+        #Prior 1: frequencie must be within bounds
         if f0<frequencies[0]:
             resid[nfreq]=(f0-frequencies[0])/f0_guess
             f0=frequencies[0]
@@ -115,6 +107,7 @@ def fit_transmission(powers,frequencies):
         return resid
     #actual fit done here
     res=least_squares(fit_fcn,p0)
+#res=scipy.optimize.least_squares(fit_fcn,p0)
     chisq=res.cost/len(powers)
     #return norm,f0,Q,noise, chi square
     return [res.x[0],res.x[1],res.x[2],res.x[3],chisq]
@@ -144,15 +137,18 @@ def fit_reflection(iq_data,frequencies):
     beta_guess=1.0
     ten_percent_mark=int(math.ceil(0.1*len(frequencies)))
 
-    power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm_guess
+    power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm
     power_stdev=0.5*(np.std(powers[0:ten_percent_mark]+np.std(powers[len(powers)-ten_percent_mark:len(powers)])))
     uncertainty=power_stdev/(2*power_mean)
+#uncertainty=np.sqrt(uncertainty_squared)
     #make a guess at the overall phase and phase slope of the whole thing
     left_phase=complex(-iq_data[0],-iq_data[1])
     right_phase=complex(-iq_data[-2],-iq_data[-1])
     phase_guess=cmath.phase(left_phase+right_phase)
+#phase_guess=cmath.phase(left_phase)+cmath.phase(right_phase)
     delay_time_guess=(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
     p0=[norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
+#print(p0)
     def fit_fcn(x):
         #calculate the residuals of the fit as an array
         nfreq=2*len(frequencies)
@@ -204,123 +200,39 @@ def fit_reflection(iq_data,frequencies):
     return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq]
             
 
-def semicolon_array(data_string,label_array):
-#TODO I'm sure there is a real json library that will do this for me
-    to_return="{"
-    split_strings=data_string.split(';')
-    if len(split_strings)<len(label_array):
-        raise dripline.core.DriplineValueError("not enough values given to fill semicolon_array")
-    for i in range(len(label_array)):
-        if i!=0:
-            to_return+=','
-        if "," in split_strings[i]: 
-            #must be an array (TODO if you want to handle strings with commas, this must be changed)
-            to_return+='"'+label_array[i]+'": ['+split_strings[i]+']'
-        else:
-            #must just be a regular float, or maybe a string with no comma
-            to_return+='"'+label_array[i]+'": '+split_strings[i]
-    to_return+="}"
-    return to_return
-_all_calibrations.append(semicolon_array)
 
-def debug_calibration(data_object):
-    logger.info("data string zero is {}".format(data_object["start_frequency"]))
-    return data_object
-_all_calibrations.append(debug_calibration)
 
-def transmission_calibration(data_object):
-    """takes a network analyzer output of format 
-            {
-        start_frequency: <number>
-        stop_frequency: <number>
-        iq_data: <array of numbers, packed i,r,i,r>
-            }
-        and augments it with a transmission fit
-          {
-        fit_f0: <number>
-        fit_Q: <number>
-        fit_norm: <number>
-        fit_noise: <number>
-        fit_chisq: <number>
-          }
-    """
-    freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
-    powers=iq_packed2powers(data_object["iq_data"])
+
+
+if __name__=='__main__':
+    #build some fake data
+    norm=1.0
+    f0=800e6
+    band=1e5
+    Q=3e4
+    noise=0.1
+    npoints=256
+    freqs=np.linspace(f0-band/2,f0+band/2,npoints)
+    powers=[ transmission_power_shape(f,norm,f0,Q,noise)+0.01*np.random.normal() for f in freqs ]
     fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq=fit_transmission(powers,freqs)
-    data_object["fit_norm"]=fit_norm
-    data_object["fit_f0"]=fit_f0
-    data_object["fit_Q"]=fit_Q
-    data_object["fit_noise"]=fit_noise
-    data_object["fit_chisq"]=fit_chisq
-    return data_object
-#return data
-_all_calibrations.append(transmission_calibration)
+#print("targets: {} {} {} {}".format(norm,f0,Q,noise))
+#p#rint("fits   : {} {} {} {} {}".format(fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq))
     
-def reflection_calibration(data_object):
-    """takes a network analyzer output of format 
-            {
-        start_frequency: <number>
-        stop_frequency: <number>
-        iq_data: <array of numbers, packed i,r,i,r>
-            }
-        and augments it with a transmission fit
-          {
-        fit_f0: <number>
-        fit_Q: <number>
-        fit_norm: <number>
-        fit_noise: <number>
-        fit_chisq: <number>
-          }
-    """
-    freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
-    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq=fit_reflection(data_object["iq_data"],freqs)
-    data_object["fit_norm"]=fit_norm
-    data_object["fit_phase"]=fit_phase
-    data_object["fit_f0"]=fit_f0
-    data_object["fit_Q"]=fit_Q
-    data_object["fit_beta"]=fit_beta
-    data_object["fit_delay_time"]=fit_delay_time
-    data_object["fit_chisq"]=fit_chisq
-    return data_object
-_all_calibrations.append(reflection_calibration)
- 
+    beta=0.9
+    delay_time=1e-5
+    phase=0.5
+    iq_complex=[ reflection_iq_shape(f,norm,phase,f0,Q,beta,delay_time) +0.01*np.random.normal()+0.01j*np.random.normal() for f in freqs ]
+    iq_packed=[]
+    for i in range(len(freqs)):
+        iq_packed.append(iq_complex[i].real)
+        iq_packed.append(iq_complex[i].imag)
+#print("iq_packed comp {}".format(iq_packed))
 
-class MultiFormatSpime(Spime):
-    def __init__(self,
-            get_commands=None,
-            set_commands=None,
-            **kwargs):
-        Spime.__init__(self,**kwargs)
-        self._get_commands=get_commands
-        self._set_commands=set_commands
-        logger.debug("end here")
+    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,chisq=fit_reflection(iq_packed,freqs)
+    print("#norm {} phase {} f0 {} Q {} beta {} delay_time {} chisq {}".format(fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,chisq))
+    fit_data=[reflection_iq_shape(f,fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time) for f in freqs ]
 
-    @calibrate(_all_calibrations)
-    def on_get(self):
-        if self._get_commands is None:
-            raise DriplineMethodNotSupportedError('<{}> has no get commands available'.format(self.name))
-        to_send=""
-        get_labels=[]
-        for i in range(len(self._get_commands)):
-            if i!=0:
-                to_send=to_send+";"
-            to_send=to_send+self._get_commands[i]["get_str"]
-            get_labels.append(self._get_commands[i]["label"])
-        result=self.provider.send([to_send])
-        return semicolon_array(result,get_labels)
-    
-    def on_set(self,value):
-        if self._set_commands is None:
-            raise DriplineMethodNotSupportedError('<{}> has no set commands available'.format(self.name))
-        try:
-            value_structure=yaml.safe_load(value)
-        except yaml.YAMLError as ecx:
-            raise DriplineValueError('<{}> had error {}'.format(self.name,exc))
-        to_send=""
-        for command in self._set_commands:
-            if command["label"] in value_structure:
-                if len(to_send)>0:
-                    to_send=to_send+";"
-                to_send+="{} {}".format(command["set_str"],value_structure[command["label"]])
-        to_send=to_send+";*OPC?"
-        return self.provider.send([to_send])
+    for i in range(len(freqs)):
+        print("{} {} {} {} {}".format(freqs[i],iq_complex[i].real,iq_complex[i].imag,fit_data[i].real,fit_data[i].imag))
+#for i in range(len(powers)):
+#        print("{} {} {}".format(freqs[i],powers[i],transmission_power_shape(freqs[i],fit_norm,fit_f0,fit_Q,fit_noise)))
