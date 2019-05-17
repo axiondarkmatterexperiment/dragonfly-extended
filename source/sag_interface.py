@@ -92,7 +92,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         elif new_state is 'locking':
             raise dripline.core.DriplineValueError('locking state is not currently supported')
         else:
-            raise dripline.core.DriplineValueErorr("don't know how to set the SAG state to <{}>".format(new_state))
+            raise dripline.core.DriplineValueError("don't know how to set the SAG state to <{}>".format(new_state))
 
     def do_enable_output_sets(self):
         logger.info('enabling lo outputs')
