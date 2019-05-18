@@ -78,21 +78,21 @@ class SAGCoordinator(dripline.core.Endpoint):
         else:
             logger.warning('state <{}> does not have a state-specific extra logs list, please create one (it may be empty)'.format(new_state))
         # actually set to the new state
-        if new_state is 'term':
+        if new_state == 'term':
             self.do_disable_output_sets()
             self.provider.set(self.switch_endpoint, "term")
-        elif new_state is 'sag':
+        elif new_state == 'sag':
             self.do_enable_output_sets()
             self.provider.set(self.switch_endpoint, "sag")
-        elif new_state is 'vna':
+        elif new_state == 'vna':
             # set the switch
             self.provider.set(self.switch_endpoint, "vna")
             # disable outputs
             self.do_disable_output_sets()
-        elif new_state is 'locking':
+        elif new_state == 'locking':
             raise dripline.core.DriplineValueError('locking state is not currently supported')
         else:
-            raise dripline.core.DriplineValueErorr("don't know how to set the SAG state to <{}>".format(new_state))
+            raise dripline.core.DriplineValueError("don't know how to set the SAG state to <{}>".format(new_state))
 
     def do_enable_output_sets(self):
         logger.info('enabling lo outputs')
