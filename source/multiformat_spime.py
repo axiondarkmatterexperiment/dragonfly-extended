@@ -6,6 +6,7 @@ import dragonfly
 import yaml
 import numpy as np
 import cmath
+import json
 from scipy.optimize import least_squares
 #
 
@@ -116,8 +117,10 @@ def fit_transmission(powers,frequencies):
     #actual fit done here
     res=least_squares(fit_fcn,p0)
     chisq=res.cost/len(powers)
-    #return norm,f0,Q,noise, chi square
-    return [res.x[0],res.x[1],res.x[2],res.x[3],chisq]
+    #contsruct the fit shape
+    fit_shape=[ transmission_power_shape(f,res.x[0],res.x[1],res.x[2],res.x[3]) for f in frequencies ]
+    #return norm,f0,Q,noise, chi square, fit shape
+    return [res.x[0],res.x[1],res.x[2],res.x[3],chisq,fit_shape]
 
 def fit_reflection(iq_data,frequencies):
     """
@@ -200,28 +203,42 @@ def fit_reflection(iq_data,frequencies):
         return resid
     res=least_squares(fit_fcn,p0)
     chisq=res.cost/len(powers)
+    #calculate shape
+    fit_shape=[]
+    for i in range(len(frequencies)):
+        yp=reflection_iq_shape(frequencies[i],res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5])
+        fit_shape.append(yp.real)
+        fit_shape.append(yp.imag)
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
-    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq]
+    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape]
             
 
-def semicolon_array(data_string,label_array):
-#TODO I'm sure there is a real json library that will do this for me
-    to_return="{"
-    split_strings=data_string.split(';')
+def semicolon_array_to_json_object(data_string,label_array):
+    #Convert a bunch of values separated by semicolons into a json object
+    #make a best guess as to whether the values are supposed to be arrays, numbers, or strings
+    #it might crash if 
+    split_strings=data_string.split(";")
+    data_object={}
     if len(split_strings)<len(label_array):
         raise dripline.core.DriplineValueError("not enough values given to fill semicolon_array")
     for i in range(len(label_array)):
-        if i!=0:
-            to_return+=','
         if "," in split_strings[i]: 
-            #must be an array (TODO if you want to handle strings with commas, this must be changed)
-            to_return+='"'+label_array[i]+'": ['+split_strings[i]+']'
+            #we assume that if there are commas, it must mean an array
+            elems=split_strings[i].split(',')
+            my_array=[]
+            for x in elems:
+                try:
+                    my_array.append(float(x))
+                except ValueError: #otherwise it must be a string
+                    my_array.append(x)
+            data_object[ label_array[i] ]=my_array
         else:
-            #must just be a regular float, or maybe a string with no comma
-            to_return+='"'+label_array[i]+'": '+split_strings[i]
-    to_return+="}"
-    return to_return
-_all_calibrations.append(semicolon_array)
+            try: #if it acts like a float, assume its a number
+                data_object[ label_array[i] ]=float(split_strings[i])
+            except ValueError: #otherwise it must be a string
+                data_object[ label_array[i] ]=split_strings[i]
+    return json.dumps(data_object)
+_all_calibrations.append(semicolon_array_to_json_object)
 
 def debug_calibration(data_object):
     logger.info("data string zero is {}".format(data_object["start_frequency"]))
@@ -246,12 +263,13 @@ def transmission_calibration(data_object):
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
     powers=iq_packed2powers(data_object["iq_data"])
-    fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq=fit_transmission(powers,freqs)
+    fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq,fit_shape=fit_transmission(powers,freqs)
     data_object["fit_norm"]=fit_norm
     data_object["fit_f0"]=fit_f0
     data_object["fit_Q"]=fit_Q
     data_object["fit_noise"]=fit_noise
     data_object["fit_chisq"]=fit_chisq
+    data_object["fit_shape"]=fit_shape
     return data_object
 #return data
 _all_calibrations.append(transmission_calibration)
@@ -273,7 +291,7 @@ def reflection_calibration(data_object):
           }
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
-    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq=fit_reflection(data_object["iq_data"],freqs)
+    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape=fit_reflection(data_object["iq_data"],freqs)
     data_object["fit_norm"]=fit_norm
     data_object["fit_phase"]=fit_phase
     data_object["fit_f0"]=fit_f0
@@ -281,11 +299,14 @@ def reflection_calibration(data_object):
     data_object["fit_beta"]=fit_beta
     data_object["fit_delay_time"]=fit_delay_time
     data_object["fit_chisq"]=fit_chisq
+    data_object["fit_shape"]=fit_shape
     return data_object
 _all_calibrations.append(reflection_calibration)
  
 
 class MultiFormatSpime(Spime):
+    '''In standard SCPI, you should be able to send a bunch of requests separated by colons
+       This spime does this and returns a json structure organized by label'''
     def __init__(self,
             get_commands=None,
             set_commands=None,
@@ -293,7 +314,6 @@ class MultiFormatSpime(Spime):
         Spime.__init__(self,**kwargs)
         self._get_commands=get_commands
         self._set_commands=set_commands
-        logger.debug("end here")
 
     @calibrate(_all_calibrations)
     def on_get(self):
@@ -307,7 +327,7 @@ class MultiFormatSpime(Spime):
             to_send=to_send+self._get_commands[i]["get_str"]
             get_labels.append(self._get_commands[i]["label"])
         result=self.provider.send([to_send])
-        return semicolon_array(result,get_labels)
+        return semicolon_array_to_json_object(result,get_labels)
     
     def on_set(self,value):
         if self._set_commands is None:
