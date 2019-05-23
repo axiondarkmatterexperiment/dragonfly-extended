@@ -49,7 +49,7 @@ def reflection_iq_shape(f,norm,phase,f0,Q,beta,delay_time):
 #beta=2*atan(beta)/3.14159+1.0 only if we have trouble keeping beta within bounds
     delta=Q*(f-f0)/f0
     denom=1/(1+4*delta*delta)
-    response=complex(denom*((beta-1)-4*delta*delta),-denom*2*beta*delta)
+    response=norm*complex(denom*((beta-1)-4*delta*delta),-denom*2*beta*delta)
     phase=cmath.exp(complex(0,phase+delay_time*(f-f0)))
     return response*phase
 
@@ -98,14 +98,14 @@ def fit_transmission(powers,frequencies):
             f0=frequencies[-1]
         #Prior 2: Q must be neither too small nor too large
         if Q<Q_min:
-            resid[nfreq+1]=(Q-Q_min)/Q_guess
+            resid[nfreq+1]=10*nfreq*(Q-Q_min)/Q_min
             Q=Q_min
         if Q>Q_max:
-            resid[nfreq+1]=(Q-Q_max)/Q_guess
+            resid[nfreq+1]=10*nfreq*(Q_max-Q)/Q_min
             Q=Q_max
         #Prior 3: noise level not too big
         if noise<0:
-            resid[nfreq+2]=-noise
+            resid[nfreq+2]=-10*nfreq*noise
             noise=0
         if noise>0.1:
             resid[nfreq+2]=(noise-0.1)
@@ -115,7 +115,7 @@ def fit_transmission(powers,frequencies):
             resid[i]=(yp-powers[i])/uncertainty
         return resid
     #actual fit done here
-    res=least_squares(fit_fcn,p0)
+    res=least_squares(fit_fcn,p0,xtol=1e-12) #things like df/f are super small, so set xtol extra low
     chisq=res.cost/len(powers)
     #contsruct the fit shape
     fit_shape=[ transmission_power_shape(f,res.x[0],res.x[1],res.x[2],res.x[3]) for f in frequencies ]
@@ -201,7 +201,7 @@ def fit_reflection(iq_data,frequencies):
             resid[2*i]=(yp.real-iq_data[2*i])/uncertainty
             resid[2*i+1]=(yp.imag-iq_data[2*i+1])/uncertainty
         return resid
-    res=least_squares(fit_fcn,p0)
+    res=least_squares(fit_fcn,p0,xtol=1e-14)
     chisq=res.cost/len(powers)
     #calculate shape
     fit_shape=[]
