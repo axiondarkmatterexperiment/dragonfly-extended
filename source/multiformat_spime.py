@@ -138,24 +138,27 @@ def fit_reflection(iq_data,frequencies):
 
     powers=iq_packed2powers(iq_data)
 #print("powers {}".format(powers))
-    f0_guess=frequencies[np.argmin(powers)]
+    min_loc=np.argmin(powers)
+    f0_guess=frequencies[min_loc]
     f_band=frequencies[-1]-frequencies[0]
     norm_guess=np.sqrt(max(powers))
     Q_min=f0_guess/f_band
-    Q_max=10*Q_min
+    Q_max=100*Q_min
     Q_guess=0.5*(Q_max+Q_min)
+    print("Q_min {} Q_max {}".format(Q_min,Q_max))
     beta_guess=1.0
     ten_percent_mark=int(math.ceil(0.1*len(frequencies)))
 
     power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm_guess
-    power_stdev=0.5*(np.std(powers[0:ten_percent_mark]+np.std(powers[len(powers)-ten_percent_mark:len(powers)])))
-    uncertainty=power_stdev/(2*power_mean)
+    power_stdev=0.5*(np.std(np.concatenate([powers[0:ten_percent_mark],powers[len(powers)-ten_percent_mark:len(powers)]])))
+    uncertainty=power_stdev/(2*np.sqrt(power_mean))
     #make a guess at the overall phase and phase slope of the whole thing
     left_phase=complex(-iq_data[0],-iq_data[1])
     right_phase=complex(-iq_data[-2],-iq_data[-1])
     phase_guess=cmath.phase(left_phase+right_phase)
-    delay_time_guess=(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
+    delay_time_guess=-(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
     p0=[norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
+    print("p0 is {}".format(p0))
     def fit_fcn(x):
         #calculate the residuals of the fit as an array
         nfreq=2*len(frequencies)
@@ -176,17 +179,17 @@ def fit_reflection(iq_data,frequencies):
             f0=frequencies[-1]
         #Prior 2: Q must be neither too small nor too large
         if Q<Q_min:
-            resid[nfreq+1]=(Q-Q_min)/Q_guess
+            resid[nfreq+1]=nfreq*10*(Q-Q_min)/Q_min
             Q=Q_min
         if Q>Q_max:
-            resid[nfreq+1]=(Q-Q_max)/Q_guess
+            resid[nfreq+1]=nfreq*10*(Q-Q_max)/Q_min
             Q=Q_max
         #Prior 3: beta is between 0 and 2
         if beta<0:
-            resid[nfreq+2]=beta
+            resid[nfreq+2]=nfreq*10*beta
             beta=0
         if beta>2:
-            resid[nfreq+2]=beta-2
+            resid[nfreq+2]=nfreq*10*(beta-2)
             beta=2
         #Prior 4: delay_time is positive and small
         if delay_time<0:
@@ -211,8 +214,7 @@ def fit_reflection(iq_data,frequencies):
         fit_shape.append(yp.imag)
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
     return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape]
-            
-
+ 
 def semicolon_array_to_json_object(data_string,label_array):
     #Convert a bunch of values separated by semicolons into a json object
     #make a best guess as to whether the values are supposed to be arrays, numbers, or strings

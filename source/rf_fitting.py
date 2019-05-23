@@ -1,9 +1,9 @@
 import math
 import numpy as np
 import cmath
+import csv
 from scipy.optimize import least_squares
 #import scipy.optimize
-
 
 def iq_packed2powers(iq_data):
     """Turn iq data in [r,i,r,i,r,i...] format into an array of powers"""
@@ -11,6 +11,7 @@ def iq_packed2powers(iq_data):
     for i in range(int(len(iq_data)/2)):
         powers[i]=iq_data[2*i]*iq_data[2*i]+iq_data[2*i+1]*iq_data[2*i+1]
     return powers
+
 
 def unpack_iq_data(iq_data):
     """takes iq data in [r,i,r,i,r,i] format and unpacks into two arrays [r,r,r],[i,i,i]"""
@@ -33,13 +34,12 @@ def transmission_power_shape(f,norm,f0,Q,noise):
 def reflection_iq_shape(f,norm,phase,f0,Q,beta,delay_time):
     """returns the expected [i,q] values from a reflection measurement
         """
-#beta=2*atan(beta)/3.14159+1.0
+#beta=2*atan(beta)/3.14159+1.0 only if we have trouble keeping beta within bounds
     delta=Q*(f-f0)/f0
     denom=1/(1+4*delta*delta)
-    response=complex(denom*((beta-1)-4*delta*delta),-denom*2*beta*delta)
-    phase=cmath.exp(complex(0,phase+delay_time*(f-f0)))
+    response=norm*complex(denom*((beta-1)-4*delta*delta),-denom*2*beta*delta)
+    phase=cmath.exp(complex(0,phase-delay_time*(f-f0)))
     return response*phase
-#return [norm*(my_r*math.cos(phase)+my_i*math.sin(phase)),norm*(-my_r*math.sin(phase)+my_i*math.cos(phase))]
 
 
 def fit_transmission(powers,frequencies):
@@ -56,17 +56,15 @@ def fit_transmission(powers,frequencies):
     if len(frequencies)<16:
         raise ValueError("not enough points to fit transmission, need 16, got {}".format(len(powers)))
 
-    f0_guess=frequencies[math.floor(len(frequencies)/2)]
+    f0_guess=frequencies[int(math.floor(len(frequencies)/2))]
     f_band=frequencies[-1]-frequencies[0]
     norm_guess=max(powers)
     Q_min=f0_guess/f_band
     Q_max=20*Q_min
     Q_guess=0.5*(Q_max+Q_min)
     ten_percent_mark=int(math.ceil(0.1*len(frequencies)))
-#print("ten percent mark is {}".format(ten_percent_mark))
-    noise_guess=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm
+    noise_guess=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm_guess
     uncertainty=0.5*(np.std(powers[0:ten_percent_mark]+np.std(powers[len(powers)-ten_percent_mark:len(powers)])))
-#print("uncertainty is {}".format(uncertainty))
     norm_guess=max(powers)-noise_guess
     p0=[norm_guess,f0_guess,Q_guess,noise_guess]
     def fit_fcn(x):
@@ -77,10 +75,9 @@ def fit_transmission(powers,frequencies):
         f0=x[1]
         Q=x[2]
         noise=x[3]
-#print("state {} {} {} {}".format(norm,f0,Q,noise))
         resid=np.zeros(nfreq+npriors)
         #add priors
-        #Prior 1: frequencie must be within bounds
+        #Prior 1: frequency must be within bounds
         if f0<frequencies[0]:
             resid[nfreq]=(f0-frequencies[0])/f0_guess
             f0=frequencies[0]
@@ -89,14 +86,14 @@ def fit_transmission(powers,frequencies):
             f0=frequencies[-1]
         #Prior 2: Q must be neither too small nor too large
         if Q<Q_min:
-            resid[nfreq+1]=(Q-Q_min)/Q_guess
+            resid[nfreq+1]=10*nfreq*(Q-Q_min)/Q_min
             Q=Q_min
         if Q>Q_max:
-            resid[nfreq+1]=(Q-Q_max)/Q_guess
+            resid[nfreq+1]=10*nfreq*(Q_max-Q)/Q_min
             Q=Q_max
         #Prior 3: noise level not too big
         if noise<0:
-            resid[nfreq+2]=-noise
+            resid[nfreq+2]=-10*nfreq*noise
             noise=0
         if noise>0.1:
             resid[nfreq+2]=(noise-0.1)
@@ -106,11 +103,12 @@ def fit_transmission(powers,frequencies):
             resid[i]=(yp-powers[i])/uncertainty
         return resid
     #actual fit done here
-    res=least_squares(fit_fcn,p0)
-#res=scipy.optimize.least_squares(fit_fcn,p0)
+    res=least_squares(fit_fcn,p0,xtol=1e-12) #things like df/f are super small, so set xtol extra low
     chisq=res.cost/len(powers)
-    #return norm,f0,Q,noise, chi square
-    return [res.x[0],res.x[1],res.x[2],res.x[3],chisq]
+    #contsruct the fit shape
+    fit_shape=[ transmission_power_shape(f,res.x[0],res.x[1],res.x[2],res.x[3]) for f in frequencies ]
+    #return norm,f0,Q,noise, chi square, fit shape
+    return [res.x[0],res.x[1],res.x[2],res.x[3],chisq,fit_shape]
 
 def fit_reflection(iq_data,frequencies):
     """
@@ -128,27 +126,27 @@ def fit_reflection(iq_data,frequencies):
 
     powers=iq_packed2powers(iq_data)
 #print("powers {}".format(powers))
-    f0_guess=frequencies[np.argmin(powers)]
+    min_loc=np.argmin(powers)
+    f0_guess=frequencies[min_loc]
     f_band=frequencies[-1]-frequencies[0]
     norm_guess=np.sqrt(max(powers))
     Q_min=f0_guess/f_band
-    Q_max=10*Q_min
+    Q_max=100*Q_min
     Q_guess=0.5*(Q_max+Q_min)
+    print("Q_min {} Q_max {}".format(Q_min,Q_max))
     beta_guess=1.0
     ten_percent_mark=int(math.ceil(0.1*len(frequencies)))
 
-    power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm
-    power_stdev=0.5*(np.std(powers[0:ten_percent_mark]+np.std(powers[len(powers)-ten_percent_mark:len(powers)])))
-    uncertainty=power_stdev/(2*power_mean)
-#uncertainty=np.sqrt(uncertainty_squared)
+    power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm_guess
+    power_stdev=0.5*(np.std(np.concatenate([powers[0:ten_percent_mark],powers[len(powers)-ten_percent_mark:len(powers)]])))
+    uncertainty=power_stdev/(2*np.sqrt(power_mean))
     #make a guess at the overall phase and phase slope of the whole thing
     left_phase=complex(-iq_data[0],-iq_data[1])
     right_phase=complex(-iq_data[-2],-iq_data[-1])
     phase_guess=cmath.phase(left_phase+right_phase)
-#phase_guess=cmath.phase(left_phase)+cmath.phase(right_phase)
-    delay_time_guess=(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
+    delay_time_guess=-(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
     p0=[norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
-#print(p0)
+    print("p0 is {}".format(p0))
     def fit_fcn(x):
         #calculate the residuals of the fit as an array
         nfreq=2*len(frequencies)
@@ -169,17 +167,17 @@ def fit_reflection(iq_data,frequencies):
             f0=frequencies[-1]
         #Prior 2: Q must be neither too small nor too large
         if Q<Q_min:
-            resid[nfreq+1]=(Q-Q_min)/Q_guess
+            resid[nfreq+1]=nfreq*10*(Q-Q_min)/Q_min
             Q=Q_min
         if Q>Q_max:
-            resid[nfreq+1]=(Q-Q_max)/Q_guess
+            resid[nfreq+1]=nfreq*10*(Q-Q_max)/Q_min
             Q=Q_max
         #Prior 3: beta is between 0 and 2
         if beta<0:
-            resid[nfreq+2]=beta
+            resid[nfreq+2]=nfreq*10*beta
             beta=0
         if beta>2:
-            resid[nfreq+2]=beta-2
+            resid[nfreq+2]=nfreq*10*(beta-2)
             beta=2
         #Prior 4: delay_time is positive and small
         if delay_time<0:
@@ -194,45 +192,58 @@ def fit_reflection(iq_data,frequencies):
             resid[2*i]=(yp.real-iq_data[2*i])/uncertainty
             resid[2*i+1]=(yp.imag-iq_data[2*i+1])/uncertainty
         return resid
-    res=least_squares(fit_fcn,p0)
+    res=least_squares(fit_fcn,p0,xtol=1e-14)
     chisq=res.cost/len(powers)
+    #calculate shape
+    fit_shape=[]
+    for i in range(len(frequencies)):
+        yp=reflection_iq_shape(frequencies[i],res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5])
+        fit_shape.append(yp.real)
+        fit_shape.append(yp.imag)
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
-    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq]
-            
-
-
+    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape]
+ 
 
 
 
 if __name__=='__main__':
-    #build some fake data
-    norm=1.0
-    f0=800e6
-    band=1e5
-    Q=3e4
-    noise=0.1
-    npoints=256
-    freqs=np.linspace(f0-band/2,f0+band/2,npoints)
-    powers=[ transmission_power_shape(f,norm,f0,Q,noise)+0.01*np.random.normal() for f in freqs ]
-    fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq=fit_transmission(powers,freqs)
-#print("targets: {} {} {} {}".format(norm,f0,Q,noise))
-#p#rint("fits   : {} {} {} {} {}".format(fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq))
-    
-    beta=0.9
-    delay_time=1e-5
-    phase=0.5
-    iq_complex=[ reflection_iq_shape(f,norm,phase,f0,Q,beta,delay_time) +0.01*np.random.normal()+0.01j*np.random.normal() for f in freqs ]
-    iq_packed=[]
+    freqs=[]
+    reals=[]
+    imags=[]
+    f=open("refl_real.csv","r")
+    c=csv.reader(f)
+    for row in c:
+        freqs.append(float(row[0]))
+        try:
+            reals.append(float(row[1]))
+        except ValueError:
+            reals.append(reals[-1])
+    f.close()
+    freqs=[]
+    f=open("refl_imag.csv","r")
+    c=csv.reader(f)
+    for row in c:
+        freqs.append(float(row[0]))
+        try:
+            imags.append(float(row[1]))
+        except ValueError:
+            imags.append(imags[-1])
+    f.close()
+    iq_data=[]
     for i in range(len(freqs)):
-        iq_packed.append(iq_complex[i].real)
-        iq_packed.append(iq_complex[i].imag)
-#print("iq_packed comp {}".format(iq_packed))
-
-    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,chisq=fit_reflection(iq_packed,freqs)
-    print("#norm {} phase {} f0 {} Q {} beta {} delay_time {} chisq {}".format(fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,chisq))
-    fit_data=[reflection_iq_shape(f,fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time) for f in freqs ]
-
+        iq_data.append(reals[i])
+        iq_data.append(imags[i])
+    norm,phase,f0,Q,beta,delay_time,chisq,shape=fit_reflection(iq_data,freqs)
+    print("chisq is {}".format(chisq))
+    print("norm is {}".format(norm))
+    print("phase is {}".format(phase))
+    print("Q is {}".format(Q))
+    print("f0 is {}".format(f0))
+    print("beta is {}".format(beta))
+    print("delay_time is {}".format(delay_time))
+    f=open("x.x","w")
     for i in range(len(freqs)):
-        print("{} {} {} {} {}".format(freqs[i],iq_complex[i].real,iq_complex[i].imag,fit_data[i].real,fit_data[i].imag))
-#for i in range(len(powers)):
-#        print("{} {} {}".format(freqs[i],powers[i],transmission_power_shape(freqs[i],fit_norm,fit_f0,fit_Q,fit_noise)))
+        f.write("{} {} {} {} {}\n".format(freqs[i],reals[i],imags[i],shape[2*i],shape[2*i+1]))
+    f.close()
+
+
