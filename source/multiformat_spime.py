@@ -6,6 +6,7 @@ import dragonfly
 import yaml
 import numpy as np
 import cmath
+import json
 from scipy.optimize import least_squares
 #
 
@@ -48,7 +49,7 @@ def reflection_iq_shape(f,norm,phase,f0,Q,beta,delay_time):
 #beta=2*atan(beta)/3.14159+1.0 only if we have trouble keeping beta within bounds
     delta=Q*(f-f0)/f0
     denom=1/(1+4*delta*delta)
-    response=complex(denom*((beta-1)-4*delta*delta),-denom*2*beta*delta)
+    response=norm*complex(denom*((beta-1)-4*delta*delta),-denom*2*beta*delta)
     phase=cmath.exp(complex(0,phase+delay_time*(f-f0)))
     return response*phase
 
@@ -97,14 +98,14 @@ def fit_transmission(powers,frequencies):
             f0=frequencies[-1]
         #Prior 2: Q must be neither too small nor too large
         if Q<Q_min:
-            resid[nfreq+1]=(Q-Q_min)/Q_guess
+            resid[nfreq+1]=10*nfreq*(Q-Q_min)/Q_min
             Q=Q_min
         if Q>Q_max:
-            resid[nfreq+1]=(Q-Q_max)/Q_guess
+            resid[nfreq+1]=10*nfreq*(Q_max-Q)/Q_min
             Q=Q_max
         #Prior 3: noise level not too big
         if noise<0:
-            resid[nfreq+2]=-noise
+            resid[nfreq+2]=-10*nfreq*noise
             noise=0
         if noise>0.1:
             resid[nfreq+2]=(noise-0.1)
@@ -114,10 +115,12 @@ def fit_transmission(powers,frequencies):
             resid[i]=(yp-powers[i])/uncertainty
         return resid
     #actual fit done here
-    res=least_squares(fit_fcn,p0)
+    res=least_squares(fit_fcn,p0,xtol=1e-12) #things like df/f are super small, so set xtol extra low
     chisq=res.cost/len(powers)
-    #return norm,f0,Q,noise, chi square
-    return [res.x[0],res.x[1],res.x[2],res.x[3],chisq]
+    #contsruct the fit shape
+    fit_shape=[ transmission_power_shape(f,res.x[0],res.x[1],res.x[2],res.x[3]) for f in frequencies ]
+    #return norm,f0,Q,noise, chi square, fit shape
+    return [res.x[0],res.x[1],res.x[2],res.x[3],chisq,fit_shape]
 
 def fit_reflection(iq_data,frequencies):
     """
@@ -135,24 +138,28 @@ def fit_reflection(iq_data,frequencies):
 
     powers=iq_packed2powers(iq_data)
 #print("powers {}".format(powers))
-    f0_guess=frequencies[np.argmin(powers)]
+    min_loc=np.argmin(powers)
+    f0_guess=frequencies[min_loc]
     f_band=frequencies[-1]-frequencies[0]
     norm_guess=np.sqrt(max(powers))
     Q_min=f0_guess/f_band
-    Q_max=10*Q_min
+    Q_max=100*Q_min
     Q_guess=0.5*(Q_max+Q_min)
+    print("Q_min {} Q_max {}".format(Q_min,Q_max))
     beta_guess=1.0
     ten_percent_mark=int(math.ceil(0.1*len(frequencies)))
 
-    power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm_guess
-    power_stdev=0.5*(np.std(powers[0:ten_percent_mark]+np.std(powers[len(powers)-ten_percent_mark:len(powers)])))
-    uncertainty=power_stdev/(2*power_mean)
+    power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))
+    power_stdev=0.5*(np.std(np.concatenate([powers[0:ten_percent_mark],powers[len(powers)-ten_percent_mark:len(powers)]])))
+    uncertainty=power_stdev/(2*np.sqrt(power_mean))
+    dip_depth=powers[min_loc]/(power_mean)
     #make a guess at the overall phase and phase slope of the whole thing
     left_phase=complex(-iq_data[0],-iq_data[1])
     right_phase=complex(-iq_data[-2],-iq_data[-1])
     phase_guess=cmath.phase(left_phase+right_phase)
-    delay_time_guess=(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
+    delay_time_guess=-(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
     p0=[norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
+    print("p0 is {}".format(p0))
     def fit_fcn(x):
         #calculate the residuals of the fit as an array
         nfreq=2*len(frequencies)
@@ -173,17 +180,17 @@ def fit_reflection(iq_data,frequencies):
             f0=frequencies[-1]
         #Prior 2: Q must be neither too small nor too large
         if Q<Q_min:
-            resid[nfreq+1]=(Q-Q_min)/Q_guess
+            resid[nfreq+1]=nfreq*10*(Q-Q_min)/Q_min
             Q=Q_min
         if Q>Q_max:
-            resid[nfreq+1]=(Q-Q_max)/Q_guess
+            resid[nfreq+1]=nfreq*10*(Q-Q_max)/Q_min
             Q=Q_max
         #Prior 3: beta is between 0 and 2
         if beta<0:
-            resid[nfreq+2]=beta
+            resid[nfreq+2]=nfreq*10*beta
             beta=0
         if beta>2:
-            resid[nfreq+2]=beta-2
+            resid[nfreq+2]=nfreq*10*(beta-2)
             beta=2
         #Prior 4: delay_time is positive and small
         if delay_time<0:
@@ -198,30 +205,46 @@ def fit_reflection(iq_data,frequencies):
             resid[2*i]=(yp.real-iq_data[2*i])/uncertainty
             resid[2*i+1]=(yp.imag-iq_data[2*i+1])/uncertainty
         return resid
-    res=least_squares(fit_fcn,p0)
+    res=least_squares(fit_fcn,p0,xtol=1e-14)
     chisq=res.cost/len(powers)
+    #calculate shape
+    fit_shape=[]
+    for i in range(len(frequencies)):
+        yp=reflection_iq_shape(frequencies[i],res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5])
+        fit_shape.append(yp.real)
+        fit_shape.append(yp.imag)
+    #TODO at this point change to dict
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
-    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq]
-            
+    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape,dip_depth]
 
-def semicolon_array(data_string,label_array):
-#TODO I'm sure there is a real json library that will do this for me
-    to_return="{"
-    split_strings=data_string.split(';')
+
+ 
+def semicolon_array_to_json_object(data_string,label_array):
+    #Convert a bunch of values separated by semicolons into a json object
+    #make a best guess as to whether the values are supposed to be arrays, numbers, or strings
+    #it might crash if 
+    split_strings=data_string.split(";")
+    data_object={}
     if len(split_strings)<len(label_array):
         raise dripline.core.DriplineValueError("not enough values given to fill semicolon_array")
     for i in range(len(label_array)):
-        if i!=0:
-            to_return+=','
         if "," in split_strings[i]: 
-            #must be an array (TODO if you want to handle strings with commas, this must be changed)
-            to_return+='"'+label_array[i]+'": ['+split_strings[i]+']'
+            #we assume that if there are commas, it must mean an array
+            elems=split_strings[i].split(',')
+            my_array=[]
+            for x in elems:
+                try:
+                    my_array.append(float(x))
+                except ValueError: #otherwise it must be a string
+                    my_array.append(x)
+            data_object[ label_array[i] ]=my_array
         else:
-            #must just be a regular float, or maybe a string with no comma
-            to_return+='"'+label_array[i]+'": '+split_strings[i]
-    to_return+="}"
-    return to_return
-_all_calibrations.append(semicolon_array)
+            try: #if it acts like a float, assume its a number
+                data_object[ label_array[i] ]=float(split_strings[i])
+            except ValueError: #otherwise it must be a string
+                data_object[ label_array[i] ]=split_strings[i]
+    return json.dumps(data_object)
+_all_calibrations.append(semicolon_array_to_json_object)
 
 def debug_calibration(data_object):
     logger.info("data string zero is {}".format(data_object["start_frequency"]))
@@ -246,12 +269,13 @@ def transmission_calibration(data_object):
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
     powers=iq_packed2powers(data_object["iq_data"])
-    fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq=fit_transmission(powers,freqs)
+    fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq,fit_shape=fit_transmission(powers,freqs)
     data_object["fit_norm"]=fit_norm
     data_object["fit_f0"]=fit_f0
     data_object["fit_Q"]=fit_Q
     data_object["fit_noise"]=fit_noise
     data_object["fit_chisq"]=fit_chisq
+    data_object["fit_shape"]=fit_shape
     return data_object
 #return data
 _all_calibrations.append(transmission_calibration)
@@ -273,7 +297,7 @@ def reflection_calibration(data_object):
           }
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
-    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq=fit_reflection(data_object["iq_data"],freqs)
+    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=fit_reflection(data_object["iq_data"],freqs)
     data_object["fit_norm"]=fit_norm
     data_object["fit_phase"]=fit_phase
     data_object["fit_f0"]=fit_f0
@@ -281,11 +305,51 @@ def reflection_calibration(data_object):
     data_object["fit_beta"]=fit_beta
     data_object["fit_delay_time"]=fit_delay_time
     data_object["fit_chisq"]=fit_chisq
+    data_object["fit_shape"]=fit_shape
+    data_object["dip_depth"]=dip_depth
     return data_object
 _all_calibrations.append(reflection_calibration)
- 
+
+def find_peaks(vec,fraction,start,stop):
+#examine the fraction*number top values in vec and return an array contiguous sections
+#which are centroids of clusters interpolated between start and stop
+    count=int(math.floor(fraction*len(vec)))
+    vec=np.array(vec)
+    max_indices=vec.argsort()[-count:]
+    sorted_max_indices=sorted(max_indices)
+
+    peak_centroids=[]
+    last_num=sorted_max_indices[0]
+    peak_start=last_num
+    for i in range(1,len(sorted_max_indices)):
+        if sorted_max_indices[i]!=(last_num+1): #part of this peak
+            peak_centroids.append(int(0.5*( peak_start+sorted_max_indices[i-1])))
+            peak_start=sorted_max_indices[i]
+        last_num=sorted_max_indices[i]
+    peak_centroids.append(int(0.5*( peak_start+sorted_max_indices[-1])))
+    return np.interp(peak_centroids,[0,len(vec)],[start,stop])
+
+def widescan_calibration(data_object):
+    """takes a network analyzer output of format 
+            {
+        start_frequency: <number>
+        stop_frequency: <number>
+        iq_data: <array of numbers, packed i,r,i,r>
+            }
+        and augments it with crude peak finding
+          {
+        peak_freqs: <array of frequencies>
+          }
+    """
+    powers=iq_packed2powers(data_object["iq_data"])
+    data_fraction=0.05 #5 percent seems to work, change as you please
+    data_object["peaks"]=find_peaks(powers,data_fraction,data_object["start_frequency"],data_object["stop_frequency"]).tolist()
+    return data_object
+_all_calibrations.append(widescan_calibration)
 
 class MultiFormatSpime(Spime):
+    '''In standard SCPI, you should be able to send a bunch of requests separated by colons
+       This spime does this and returns a json structure organized by label'''
     def __init__(self,
             get_commands=None,
             set_commands=None,
@@ -293,7 +357,6 @@ class MultiFormatSpime(Spime):
         Spime.__init__(self,**kwargs)
         self._get_commands=get_commands
         self._set_commands=set_commands
-        logger.debug("end here")
 
     @calibrate(_all_calibrations)
     def on_get(self):
@@ -307,7 +370,7 @@ class MultiFormatSpime(Spime):
             to_send=to_send+self._get_commands[i]["get_str"]
             get_labels.append(self._get_commands[i]["label"])
         result=self.provider.send([to_send])
-        return semicolon_array(result,get_labels)
+        return semicolon_array_to_json_object(result,get_labels)
     
     def on_set(self,value):
         if self._set_commands is None:
