@@ -149,9 +149,10 @@ def fit_reflection(iq_data,frequencies):
     beta_guess=1.0
     ten_percent_mark=int(math.ceil(0.1*len(frequencies)))
 
-    power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))/norm_guess
+    power_mean=0.5*(np.mean(powers[0:ten_percent_mark]+np.mean(powers[len(powers)-ten_percent_mark:len(powers)])))
     power_stdev=0.5*(np.std(np.concatenate([powers[0:ten_percent_mark],powers[len(powers)-ten_percent_mark:len(powers)]])))
     uncertainty=power_stdev/(2*np.sqrt(power_mean))
+    dip_depth=powers[min_loc]/(power_mean)
     #make a guess at the overall phase and phase slope of the whole thing
     left_phase=complex(-iq_data[0],-iq_data[1])
     right_phase=complex(-iq_data[-2],-iq_data[-1])
@@ -212,8 +213,9 @@ def fit_reflection(iq_data,frequencies):
         yp=reflection_iq_shape(frequencies[i],res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5])
         fit_shape.append(yp.real)
         fit_shape.append(yp.imag)
+    #TODO at this point change to dict
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
-    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape]
+    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape,dip_depth]
 
 
  
@@ -295,7 +297,7 @@ def reflection_calibration(data_object):
           }
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
-    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape=fit_reflection(data_object["iq_data"],freqs)
+    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=fit_reflection(data_object["iq_data"],freqs)
     data_object["fit_norm"]=fit_norm
     data_object["fit_phase"]=fit_phase
     data_object["fit_f0"]=fit_f0
@@ -304,6 +306,7 @@ def reflection_calibration(data_object):
     data_object["fit_delay_time"]=fit_delay_time
     data_object["fit_chisq"]=fit_chisq
     data_object["fit_shape"]=fit_shape
+    data_object["dip_depth"]=dip_depth
     return data_object
 _all_calibrations.append(reflection_calibration)
 
