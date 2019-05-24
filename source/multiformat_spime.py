@@ -214,6 +214,8 @@ def fit_reflection(iq_data,frequencies):
         fit_shape.append(yp.imag)
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
     return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape]
+
+
  
 def semicolon_array_to_json_object(data_string,label_array):
     #Convert a bunch of values separated by semicolons into a json object
@@ -304,7 +306,43 @@ def reflection_calibration(data_object):
     data_object["fit_shape"]=fit_shape
     return data_object
 _all_calibrations.append(reflection_calibration)
- 
+
+def find_peaks(vec,fraction,start,stop):
+#examine the fraction*number top values in vec and return an array contiguous sections
+#which are centroids of clusters interpolated between start and stop
+    count=int(math.floor(fraction*len(vec)))
+    vec=np.array(vec)
+    max_indices=vec.argsort()[-count:]
+    sorted_max_indices=sorted(max_indices)
+
+    peak_centroids=[]
+    last_num=sorted_max_indices[0]
+    peak_start=last_num
+    for i in range(1,len(sorted_max_indices)):
+        if sorted_max_indices[i]!=(last_num+1): #part of this peak
+            peak_centroids.append(int(0.5*( peak_start+sorted_max_indices[i-1])))
+            peak_start=sorted_max_indices[i]
+        last_num=sorted_max_indices[i]
+    peak_centroids.append(int(0.5*( peak_start+sorted_max_indices[-1])))
+    return np.interp(peak_centroids,[0,len(vec)],[start,stop])
+
+def widescan_calibration(data_object):
+    """takes a network analyzer output of format 
+            {
+        start_frequency: <number>
+        stop_frequency: <number>
+        iq_data: <array of numbers, packed i,r,i,r>
+            }
+        and augments it with crude peak finding
+          {
+        peak_freqs: <array of frequencies>
+          }
+    """
+    powers=iq_packed2powers(data_object["iq_data"])
+    data_fraction=0.05 #5 percent seems to work, change as you please
+    data_object["peaks"]=find_peaks(powers,data_fraction,data_object["start_frequency"],data_object["stop_frequency"]).tolist()
+    return data_object
+_all_calibrations.append(widescan_calibration)
 
 class MultiFormatSpime(Spime):
     '''In standard SCPI, you should be able to send a bunch of requests separated by colons

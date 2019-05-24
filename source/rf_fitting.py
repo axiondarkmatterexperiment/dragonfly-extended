@@ -3,6 +3,8 @@ import numpy as np
 import cmath
 import csv
 from scipy.optimize import least_squares
+#from scipy.signal import find_peaks
+#from scipy.signal import find_peaks_cwt
 #import scipy.optimize
 
 def iq_packed2powers(iq_data):
@@ -203,10 +205,55 @@ def fit_reflection(iq_data,frequencies):
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
     return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape]
  
+def find_peaks(vec,fraction,start_freq,stop_freq):
+#examine the fraction*number top values and return contiguous sections
+    count=int(math.floor(fraction*len(vec)))
+    vec=np.array(vec)
+    max_indices=vec.argsort()[-count:]
+    sorted_max_indices=sorted(max_indices)
+
+    peak_centroids=[]
+    last_num=sorted_max_indices[0]
+    peak_start=last_num
+    for i in range(1,len(sorted_max_indices)):
+        if sorted_max_indices[i]!=(last_num+1): #part of this peak
+            peak_centroids.append(int(0.5*( peak_start+sorted_max_indices[i-1])))
+            peak_start=sorted_max_indices[i]
+        last_num=sorted_max_indices[i]
+    peak_centroids.append(int(0.5*( peak_start+sorted_max_indices[-1])))
+    return np.interp(peak_centroids,[0,len(vec)],[start_freq,stop_freq])
+
+
 
 
 
 if __name__=='__main__':
+    freqs=[]
+    pows=[]
+    powslog=[]
+    f=open("wide.csv","r")
+    c=csv.reader(f)
+    for row in c:
+        freqs.append(float(row[0]))
+        powslog.append(float(row[1]))
+        pows.append(10.0**(float(row[1])/10))
+    f.close()
+
+#Q_target=10000
+#bin_width=len(freqs)*((0.5*(freqs[0]+freqs[-1])/Q_target)/(freqs[-1]-freqs[0]))
+#print("bin width {}".format(bin_width))
+    pk_inds=find_peaks(pows,0.05,freqs[0],freqs[-1])
+#pk_inds=find_peaks_cwt(pows,[3],min_snr=2)
+    print("peaks at {}".format(pk_inds))
+
+    f=open("x.x","w")
+    for i in range(len(freqs)):
+#        if i in pk_inds:
+#            f.write("{} {} 1\n".format(freqs[i],powslog[i]))
+#        else:
+            f.write("{} {} 0\n".format(freqs[i],powslog[i]))
+    f.close()
+"""
     freqs=[]
     reals=[]
     imags=[]
@@ -245,5 +292,6 @@ if __name__=='__main__':
     for i in range(len(freqs)):
         f.write("{} {} {} {} {}\n".format(freqs[i],reals[i],imags[i],shape[2*i],shape[2*i+1]))
     f.close()
+"""
 
 
