@@ -1,4 +1,5 @@
 import asteval
+import six
 
 import dripline
 import dragonfly
@@ -42,7 +43,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             logger.debug("dealing with calculated_set: {}".format(a_calculated_set))
             if len(a_calculated_set) > 1:
                 raise dripline.core.DriplineValueError('all calculated sets must be a single entry dict')
-            this_endpoint,set_str = a_calculated_set.items()[0]
+            [(this_endpoint,set_str)] = six.iteritems(a_calculated_set)
             logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
             this_value = set_str
             if '{' in set_str and '}' in set_str:
