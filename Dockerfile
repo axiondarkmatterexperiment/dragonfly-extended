@@ -6,8 +6,8 @@ ARG img_tag=v3.10.1
 
 from ${img_user}/${img_repo}:${img_tag}
 
-RUN pip install PyModbusTCP
-RUN pip install scipy
+RUN pip3 install PyModbusTCP
+RUN pip3 install scipy
 
 # going to try just installing this, if we need to carefully only include it in arm installs we'll figure that out later
 #RUN pip install rpi.gpio Adafruit_ADS1x15
