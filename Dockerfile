@@ -1,10 +1,13 @@
-# If you're updating the base image, please keep it on an explicit version, don't use "latest" or similar
-# ... except that v1.14.2 isn't out and we need to pick up the new dripline-python version
-#from project8/dragonfly:latest
-from project8/dragonfly:v1.17.3
+## NOTE: these defaults are not used by travis!
+## you *must* update the .travis.yml file to change the dripline-python version
+ARG img_user=driplineorg
+ARG img_repo=dripline-python
+ARG img_tag=v3.10.1
 
-RUN pip install PyModbusTCP
-RUN pip install scipy
+from ${img_user}/${img_repo}:${img_tag}
+
+RUN pip3 install PyModbusTCP
+RUN pip3 install scipy
 
 # going to try just installing this, if we need to carefully only include it in arm installs we'll figure that out later
 #RUN pip install rpi.gpio Adafruit_ADS1x15
