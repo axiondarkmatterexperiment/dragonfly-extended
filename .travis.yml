@@ -18,6 +18,7 @@ branches:
   only:
     - master
     - develop
+    - feature/travis-builds
     - /^v\d+\.\d+\.\d+(-S*)?$/
 
 jobs:
