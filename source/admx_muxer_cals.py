@@ -80,10 +80,17 @@ def x41849(resistance):
     return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
 _all_calibrations.append(x41849)
 
+def x43022(resistance):
+    '''Calibration for a cernox'''
+    values_x = [68.6, 248., 3771.]
+    values_y = [300., 78., 4.2]
+    return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
+_all_calibrations.append(x43022)
+
 def x76868(resistance):
     '''Calibration for a cernox'''
     values_x = [44.4499, 107.207, 588.164, 1878.75]
-    values_y = [305., 77.35, 4.2, 1.29997]
+    values_y = [305.0, 77.35, 4.2, 1.29997]
     return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
 _all_calibrations.append(x76868)
 
