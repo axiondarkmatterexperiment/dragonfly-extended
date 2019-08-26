@@ -1,8 +1,8 @@
 ## NOTE: these defaults are not used by travis!
 ## you *must* update the .travis.yml file to change the dripline-python version
-ARG img_user=driplineorg
-ARG img_repo=dripline-python
-ARG img_tag=v3.10.1
+ARG img_user=project8
+ARG img_repo=dragonfly
+ARG img_tag=v1.19.0
 
 from ${img_user}/${img_repo}:${img_tag}
 
