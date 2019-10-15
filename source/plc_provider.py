@@ -85,3 +85,21 @@ class plc_value(Spime):
         raw_bits = sum([d<<16*n for d,n in zip(raw_bits_data, range(self.n_registers-1, -1, -1))])
         typed_value = ctypes.c_float.from_buffer(ctypes.c_int(raw_bits))
         return typed_value.value
+
+class plc_bool(Spime):
+    # note well, the register here (and used in modbusTCP) is 0 indexed, but our PLC documentation is all
+    # indexed from 1 (and have a preceeding 4, ie this_register = (PLC_code_register % 400000) -1 )
+    def __init__(self, register=None, bit=None, **kwargs):
+        Spime.__init__(self, **kwargs)
+        if register is None:
+            raise ValueERror("register is a required configuration parameter for <plc_value>")
+        self.register = register
+        self.bit = bit
+        self.n_registers = 1
+
+    @calibrate()
+    def on_get(self):
+        raw_bits_data = self.provider.read_holding(self.register, self.n_registers)
+        logger.debug('raw bits are: ', raw_bits_data)
+        this_state = bool(raw_bits_data[0] & 2**self.bit)
+        return this_state
