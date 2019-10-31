@@ -15,6 +15,9 @@ from dragonfly.implementations.postgres_interface import PostgreSQLInterface
 __all__ = []
 logger = logging.getLogger('dragonfly.custom.sensor_logger')
 
+#member variables
+#self.prefix = spectra
+#key_string = {'keys':['{}.#'.format(spectra)]}
 
 __all__.append('SensorLoggerADMX')
 class SensorLoggerADMX(Gogol, PostgreSQLInterface):
@@ -28,8 +31,10 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
         sensor_type_match_column (str): column against which to check for matches to the sensor name
         data_tables_dict (dict): dictionary mapping types (in the sensor_type_map_table) to child endpoints of this instance which provide access to the data_table for that type
         '''
+        self.prefix = spectra
         # listen to sensor_value alerts channel
 #        kwargs.update({'keys':['spectra.#']})
+
         PostgreSQLInterface.__init__(self, **kwargs)
         Gogol.__init__(self, **kwargs)
 
@@ -51,7 +56,7 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
         ### Get the sensor name
         sensor_name = None
         if '.' in basic_deliver.routing_key:
-            re_out = re.match(r'spectra.(?P<from>\S+)', basic_deliver.routing_key)
+            re_out = re.match(r'{}.(?P<from>\S+)'.format(self.prefix), basic_deliver.routing_key)
             sensor_name = re_out.groupdict()['from']
         # note that the following is deprecated in dripline 2.x, retained for compatibility
         else:
