@@ -56,11 +56,6 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
 
     def this_consume(self, message, basic_deliver):
         ### Get the sensor name
-        if not basic_deliver.routing_key.split('.')[0] == self.prefix:
-            logger.warning("should not consume this message")
-            logger.warning(self.prefix)
-            return
-             
         
         sensor_name = None
         if '.' in basic_deliver.routing_key:
