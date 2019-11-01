@@ -32,6 +32,8 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
         data_tables_dict (dict): dictionary mapping types (in the sensor_type_map_table) to child endpoints of this instance which provide access to the data_table for that type
         '''
         self.prefix = kwargs['keys'][0].split(".")[0]
+        print('print prefix variable')
+        print(self.prefix)
         # listen to sensor_value alerts channel
 #        kwargs.update({'keys':['spectra.#']})
 
