@@ -56,7 +56,7 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
 
     def this_consume(self, message, basic_deliver):
         ### Get the sensor name
-        
+        logger.debug("consuming message to: {}".format(basic_deliver.routing_key))
         sensor_name = None
         if '.' in basic_deliver.routing_key:
             re_out = re.match(r'{}.(?P<from>\S+)'.format(self.prefix), basic_deliver.routing_key)
