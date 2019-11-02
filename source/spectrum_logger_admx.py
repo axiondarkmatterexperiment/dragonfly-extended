@@ -31,7 +31,9 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
         sensor_type_match_column (str): column against which to check for matches to the sensor name
         data_tables_dict (dict): dictionary mapping types (in the sensor_type_map_table) to child endpoints of this instance which provide access to the data_table for that type
         '''
-
+        for key, value in kwargs.items():
+            logger.debug("{0} = {1}".format(key, value))
+            
         self.prefix = kwargs['keys'][0]#.split(".")[0]
         logger.debug(self.prefix)
         logger.debug("original prefix is: {}".format(self.prefix))
