@@ -33,7 +33,9 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
         '''
 
         self.prefix = kwargs['keys'][0]#.split(".")[0]
-        
+        logger.debug("original prefix is: {}".format(self.prefix))
+        self.prefix2 = kwargs['keys'][0].split(".")[0]
+        logger.debug("second prefix is: {}".format(self.prefix2))
         # listen to sensor_value alerts channel
 #        kwargs.update({'keys':['spectra.#']})
 
