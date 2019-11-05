@@ -1,5 +1,6 @@
 '''
-sensor logger now as a service
+This file is a slight hack on the Project 8 version, which was previously insufficiently generic for our (ADMX's) needs.
+That has been fixed and there are bugs here resolved by P8, we revert to their version.
 '''
 
 from __future__ import absolute_import
@@ -33,7 +34,7 @@ class SensorLoggerADMX(Gogol, PostgreSQLInterface):
         '''
         for key, value in kwargs.items():
             logger.debug("{0} = {1}".format(key, value))
-            
+
         self.prefix = kwargs['keys'][0]#.split(".")[0]
         logger.debug(self.prefix)
         logger.debug("original prefix is: {}".format(self.prefix))
