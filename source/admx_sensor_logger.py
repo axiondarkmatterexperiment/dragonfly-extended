@@ -81,6 +81,8 @@ class SensorLogger(Gogol, PostgreSQLInterface):
             self._sensor_types[sensor_name] = this_type[1][0][0]
             if not self._sensor_types[sensor_name] in self._data_tables:
                 logger.critical('endpoint with name "{}" is not configured with a recognized type in the sensors_list table'.format(sensor_name))
+                logger.critical('sensor type is {}'.format(self._sensor_types[sensor_name]))
+                logger.critical('data tables: {}'.format(self._data_tables))
                 return
             this_data_table = self.endpoints[self._data_tables[self._sensor_types[sensor_name]]]
 
