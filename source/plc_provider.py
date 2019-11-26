@@ -79,7 +79,7 @@ class plc_value(Spime):
     @calibrate([mother_dewar_lhe])
     def on_get(self):
         raw_bits_data = self.provider.read_holding(self.register, self.n_registers)
-        logger.debug('raw bits are: ', raw_bits_data)
+        logger.debug('raw bits are: {}'.format(raw_bits_data))
         # modbus puts the order in reverse...
         raw_bits_data.reverse()
         raw_bits = sum([d<<16*n for d,n in zip(raw_bits_data, range(self.n_registers-1, -1, -1))])
@@ -100,6 +100,6 @@ class plc_bool(Spime):
     @calibrate()
     def on_get(self):
         raw_bits_data = self.provider.read_holding(self.register, self.n_registers)
-        logger.debug('raw bits are: ', raw_bits_data)
+        logger.debug('raw bits are: {}'.format(raw_bits_data))
         this_state = bool(raw_bits_data[0] & 2**self.bit)
         return this_state

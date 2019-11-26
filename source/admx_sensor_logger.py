@@ -10,10 +10,10 @@ import re
 
 # internal imports
 from dripline.core import Gogol, exceptions
-from .postgres_interface import PostgreSQLInterface
+from dragonfly.implementations.postgres_interface import PostgreSQLInterface
 
 __all__ = []
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('dragonfly.{}'.format(__name__))
 
 
 __all__.append('SensorLogger')
@@ -62,6 +62,7 @@ class SensorLogger(Gogol, PostgreSQLInterface):
         # note that the following is deprecated in dripline 2.x, retained for compatibility
         else:
             raise exceptions.DriplineValueError('unknown sensor name')
+        logger.info("attempting to log sensor '{}'".format(sensor_name))
 
         ### Get the type and table for the sensor
         this_type = None
@@ -71,6 +72,7 @@ class SensorLogger(Gogol, PostgreSQLInterface):
                                         )
         if not this_type[1]:
             logger.critical('endpoint with name "{}" was not found in database hence failed to log its value; might need to add it to the db'.format(sensor_name))
+            return
         else:
             this_table = self.endpoints[self._sensor_type_map_table]
             this_type = this_table.do_select(return_cols=[self._sensor_type_column_name],
@@ -79,6 +81,8 @@ class SensorLogger(Gogol, PostgreSQLInterface):
             self._sensor_types[sensor_name] = this_type[1][0][0]
             if not self._sensor_types[sensor_name] in self._data_tables:
                 logger.critical('endpoint with name "{}" is not configured with a recognized type in the sensors_list table'.format(sensor_name))
+                logger.critical('sensor type is {}'.format(self._sensor_types[sensor_name]))
+                logger.critical('data tables: {}'.format(self._data_tables))
                 return
             this_data_table = self.endpoints[self._data_tables[self._sensor_types[sensor_name]]]
 
