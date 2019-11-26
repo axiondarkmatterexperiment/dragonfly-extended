@@ -12,16 +12,6 @@ import dripline
 import dragonfly
 from scipy.interpolate import interp1d
 
-#import functions for sidecar fitting.
-from sidecar_reflection_fit_module import estimate_power_uncertainty
-from sidecar_reflection_fit_module import guess_reflection_fit_params
-from sidecar_reflection_fit_module import func_pow_reflected
-from sidecar_reflection_fit_module import deconvolve_transmission
-from sidecar_reflection_fit_module import calculate_coupling
-from sidecar_reflection_fit_module import calc_red_chisq
-from sidecar_reflection_fit_module import fit_shape_database_hack
-
-
 import logging
 logger = logging.getLogger('dragonfly.implementations.custom')
 
@@ -52,6 +42,96 @@ def repack_iq_data(data_r, data_i):
     iq_series[0::2] = data_r
     iq_series[1::2] = data_i
     return iq_series
+
+def find_nearest_idx(array,value):
+    idx = (np.abs(array-value)).argmin()
+    return idx
+def guess_fo(f, gamma2):
+    ind_fo = np.argmin(gamma2) #find index of resonant frequency
+    return f[ind_fo]
+
+def guess_offset(y):
+    low_filt_perc = 0.33
+    y_filtered = stats.trim1(y, low_filt_perc, tail = 'left') #cut out bottom low_filt_perc of y values. Basically want to filter out the notch a bit.
+    return np.median(y_filtered)
+
+def guess_dy(y):
+    return guess_offset(y) - np.min(y) 
+
+def guess_q(f, y):
+    ind_fc = np.argmin(y) #find index of resonant frequency
+    fc = f[ind_fc] #obtain resonant frequency
+
+    #look at the left of the resonance
+    left_f = f[:ind_fc] 
+    left_y = y[:ind_fc] 
+    dy = guess_dy(y)
+    ind_fwhm = find_nearest_idx(left_y, dy/2)
+
+    #find distance between fwhm and resonance
+    f1 = f[ind_fwhm]
+    #guess bandwidth as twice that distance
+    del_f = 2*(fc-f1)
+    Q_guess = fc/del_f
+    return Q_guess
+
+def guess_reflection_fit_params(f, gamma2):
+    fo_guess = guess_fo(f, gamma2)
+    Q_guess = guess_q(f, gamma2)
+    dy_guess = guess_dy(gamma2)
+    C_guess = guess_offset(gamma2)
+    return fo_guess, Q_guess, dy_guess, C_guess
+
+def func_pow_reflected(f, fo, Q, del_y, C):
+    """The reflected power. Just a Lorentzian"""
+    return -(fo/(2*Q))**2*del_y/((f-fo)**2+(fo/(2*Q))**2)+C
+
+
+def get_arr_ends(x, n_end_elements):
+    return np.concatenate([x[:n_end_elements],x[-n_end_elements:]])
+
+def deconvolve_transmission(f, gamma_mag, gamma_phase, C_fit):
+    gamma_cav_mag = gamma_mag*np.sqrt(1/C_fit)
+
+    interp_phase = interp1d(f, gamma_phase, kind='cubic')
+    f_ends = get_arr_ends(f, 5)
+    phase_ends = get_arr_ends(gamma_phase, 5)
+#    interp_phase_wo_notch = interp1d(f_ends, phase_ends, kind='linear')
+    interp_phase_wo_notch = np.poly1d(np.polyfit(f_ends, phase_ends, 1))
+    delay_phase = interp_phase_wo_notch(f)
+    gamma_cav_phase = interp_phase(f) - delay_phase
+
+    return gamma_cav_mag, gamma_cav_phase, delay_phase
+
+#    interp_mag = interp1d(f, deconvolved_mag, kind='cubic')
+#    interp_sig_mag = interp1d(f, deconvolved_sig_mag, kind='cubic')
+#    interp_phase = interp1d(f, deconvolved_phase, kind='cubic')
+#
+
+def calculate_coupling(gamma_mag_fo, gamma_phase_fo):
+    """Calculate coupling to a cavity after reflection fit is done"""
+    beta = (1+np.sign(gamma_phase_fo - np.pi)*np.abs(gamma_mag_fo))/(1-np.sign(gamma_phase_fo - np.pi)*np.abs(gamma_mag_fo))
+    return beta
+
+def estimate_power_uncertainty(power):
+    """Assume fractional uncertainty in power is constant. This is not a correct assumption, but probably good enough for now."""
+    pow_fractional_std = np.std(get_arr_ends(power, 5))/np.mean(get_arr_ends(power, 5))
+    sig_power = power*pow_fractional_std
+    return sig_power
+
+def calc_red_chisq(x, y, sigma_y, func, fit_param):
+    resid = y-func(x, *fit_param)
+    chisq = np.sum(resid/sigma_y)
+    dof = len(y)-len(fit_param)
+    red_chisq = chisq/dof
+    return red_chisq
+
+def fit_shape_database_hack(x, func, fit_param):
+    """This takes the sidecar fit, which is in power, and returns it into the fit shape that"""
+    gamma_mag = np.sqrt(func(x, *fit_param))
+    gamma_dummy = np.zeros_like(ymag)
+    fit_shape = np.concatenate(gamma_mag, gamma_dummy)
+    return fit_shape
 
 def transmission_power_shape(f,norm,f0,Q,noise):
     """returns the expected power from a transmission measurement at frequency f with parameters
