@@ -1,14 +1,25 @@
 import math
-from dripline.core import calibrate
-from dripline.core import Spime
-import dripline
-import dragonfly
+import sys
 import yaml
 import numpy as np
 import cmath
 import json
 from scipy.optimize import least_squares
-#
+
+from dripline.core import calibrate
+from dripline.core import Spime
+import dripline
+import dragonfly
+from scipy.interpolate import interp1d
+
+#import functions for sidecar fitting.
+from sidecar_reflection_fit_module import estimate_power_uncertainty
+from sidecar_reflection_fit_module import guess_reflection_fit_params
+from sidecar_reflection_fit_module import func_pow_reflected
+from sidecar_reflection_fit_module import deconvolve_transmission
+from sidecar_reflection_fit_module import calculate_coupling
+from sidecar_reflection_fit_module import calc_red_chisq
+from sidecar_reflection_fit_module import fit_shape_database_hack
 
 
 import logging
@@ -24,15 +35,23 @@ def iq_packed2powers(iq_data):
         powers[i]=iq_data[2*i]*iq_data[2*i]+iq_data[2*i+1]*iq_data[2*i+1]
     return powers
 
-
 def unpack_iq_data(iq_data):
     """takes iq data in [r,i,r,i,r,i] format and unpacks into two arrays [r,r,r],[i,i,i]"""
-    ret_r=np.zeros(len(iq_data)/2)
-    ret_i=np.zeros(len(iq_data)/2)
-    for i in range(len(iq_data),2):
-        ret_r[i/2]=iq_data[i]
-        ret_i[i/2]=iq_data[i+1]
+    ret_r=np.zeros(len(iq_data)//2)
+    ret_i=np.zeros(len(iq_data)//2)
+    for i in range(0, len(iq_data),2):
+        ret_r[i//2]=iq_data[i]
+        ret_i[i//2]=iq_data[i+1]
     return ret_r,ret_i
+
+def repack_iq_data(data_r, data_i):
+    """takes iq data seperated into 2 arrays [r,r,r], [i,i,i] and combines them into one array [r,i,r,i,r,i]. This method was made to test certain functions that takes iq data with data that had already been unpacked."""
+    if not (data_r.size == data_i.size):
+        raise ValueError("Real and imaginary vectors should be the same length")
+    iq_series = np.empty((data_r.size + data_i.size,), dtype=data_r.dtype)
+    iq_series[0::2] = data_r
+    iq_series[1::2] = data_i
+    return iq_series
 
 def transmission_power_shape(f,norm,f0,Q,noise):
     """returns the expected power from a transmission measurement at frequency f with parameters
@@ -127,7 +146,7 @@ def fit_reflection(iq_data,frequencies):
         Performs a least-squares fit on a reflection measurement, an array of powers and frequencies
         ASSUMPTIONS: (these go in as priors)
         - center frequency is within band
-        - band is 1-10 times q width
+        - NA band is 1-10 times q width
         - the phase from line length does not wrap around within the band
         - uncertainty is standard devation of outer 10% of band
     """
@@ -217,8 +236,42 @@ def fit_reflection(iq_data,frequencies):
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
     return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape,dip_depth]
 
+def sidecar_fit_reflection(iq_data,frequencies):
+    """fits sidecar reflection data. For now, it is separate function from the main experiment so as not to disturb it."""
+    #TODO Estimate uncertainty appropriately
 
- 
+    if 2*len(frequencies)!=len(iq_data):
+        raise ValueError("point count not right nfreqs {} npows {}".format(len(frequencies),len(powers)))
+    if len(frequencies)<16:
+        raise ValueError("not enough points to fit transmission, need 16, got {}".format(len(powers)))
+
+    gamma_mag_sq=iq_packed2powers(iq_data)
+    sig_gamma_mag_sq = estimate_power_uncertainty(gamma_mag_sq)
+    gamma_mag = np.sqrt(gamma_mag_sq)
+    gamma_phase = np.unwrap(np.angle(gamma_complex))
+
+    po_guess = guess_reflection_fit_params(frequencies, gamma_mag_sq)
+    pow_fit_param, pow_fit_cov = curve_fit(func_pow_reflected, frequencies, 
+                                           p0=po_guess, sigma= sig_gamma_mag_sq)
+    fo_fit, Q_fit, del_y_fit, C_fit = pow_fit_param
+    red_chisq = calc_red_chisq(f, gamma_mag_sq, sig_gamma_mag_sq, func_pow_reflected, pow_fit_param)
+
+    gamma_cav_mag, gamma_cav_phase = deconvolve_transmission(frequencies, gamma_mag, gamma_phase, C_fit) #this is from data, not from the fitted function.
+
+    gamma_cav_mag_fo_from_fit = np.sqrt(func_pow_reflected(fo_fit, *pow_fit_param)*1/C_fit)
+    
+    interp_phase = interp1d(f, gamma_cav_phase, kind='cubic')
+    gamma_cav_phase_fo_from_interp = interp_phase(fo_fit)
+    
+    beta = calculate_coupling(gamma_cav_mag_fo_from_fit, gamma_cav_phase_fo_from_interp)
+    
+    delay_time = None
+
+    fit_shape = fit_shape_database_hack(f, func_pow_reflected, pow_fit_param)
+
+    return [C_fit, gamma_cav_phase, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit]
+
+
 def semicolon_array_to_json_object(data_string,label_array):
     #Convert a bunch of values separated by semicolons into a json object
     #make a best guess as to whether the values are supposed to be arrays, numbers, or strings
@@ -310,6 +363,38 @@ def reflection_calibration(data_object):
     return data_object
 _all_calibrations.append(reflection_calibration)
 
+def sidecar_reflection_calibration(data_object):
+    """takes a network analyzer output of format 
+            {
+        start_frequency: <number>
+        stop_frequency: <number>
+        iq_data: <array of numbers, packed i,r,i,r>
+            }
+        and augments it with a transmission fit
+          {
+        fit_f0: <number>
+        fit_Q: <number>
+        fit_norm: <number>
+        fit_noise: <number>
+        fit_chisq: <number>
+          }
+    """
+    freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
+    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=sidecar_fit_reflection(data_object["iq_data"],freqs)
+    data_object["fit_norm"]=fit_norm
+    data_object["fit_phase"]=fit_phase
+    data_object["fit_f0"]=fit_f0
+    data_object["fit_Q"]=fit_Q
+    data_object["fit_beta"]=fit_beta
+    data_object["fit_delay_time"]=fit_delay_time
+    data_object["fit_chisq"]=fit_chisq
+    data_object["fit_shape"]=fit_shape
+    data_object["dip_depth"]=dip_depth
+    return data_object
+_all_calibrations.append(reflection_calibration)
+
+
+
 def find_peaks(vec,fraction,start,stop):
 #examine the fraction*number top values in vec and return an array contiguous sections
 #which are centroids of clusters interpolated between start and stop
@@ -346,6 +431,7 @@ def widescan_calibration(data_object):
     data_object["peaks"]=find_peaks(powers,data_fraction,data_object["start_frequency"],data_object["stop_frequency"]).tolist()
     return data_object
 _all_calibrations.append(widescan_calibration)
+
 
 class MultiFormatSpime(Spime):
     '''In standard SCPI, you should be able to send a bunch of requests separated by colons

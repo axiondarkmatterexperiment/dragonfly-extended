@@ -84,10 +84,10 @@ def deconvolve_transmission(f, gamma_mag, gamma_phase, C_fit):
     phase_ends = get_arr_ends(gamma_phase, 5)
 #    interp_phase_wo_notch = interp1d(f_ends, phase_ends, kind='linear')
     interp_phase_wo_notch = np.poly1d(np.polyfit(f_ends, phase_ends, 1))
-    del_phase_line = interp_phase_wo_notch(f)
-    gamma_cav_phase = interp_phase(f) - del_phase_line
+    delay_phase = interp_phase_wo_notch(f)
+    gamma_cav_phase = interp_phase(f) - delay_phase
 
-    return gamma_cav_mag, gamma_cav_phase
+    return gamma_cav_mag, gamma_cav_phase, delay_phase
 
 #    interp_mag = interp1d(f, deconvolved_mag, kind='cubic')
 #    interp_sig_mag = interp1d(f, deconvolved_sig_mag, kind='cubic')
@@ -103,5 +103,18 @@ def estimate_power_uncertainty(power):
     pow_fractional_std = np.std(get_arr_ends(power, 5))/np.mean(get_arr_ends(power, 5))
     sig_power = power*pow_fractional_std
     return sig_power
-    
+
+def calc_red_chisq(x, y, sigma_y, func, fit_param):
+    resid = y-func(x, *fit_param)
+    chisq = np.sum(resid/sigma_y)
+    dof = len(y)-len(fit_param)
+    red_chisq = chisq/dof
+    return red_chisq
+
+def fit_shape_database_hack(x, func, fit_param):
+    #This takes the sidecar fit, which is in power, and returns it into the fit shape that 
+    gamma_mag = np.sqrt(func(x, *fit_param))
+    gamma_dummy = np.zeros_like(ymag)
+    fit_shape = np.concatenate(gamma_mag, gamma_dummy)
+    return fit_shape
 
