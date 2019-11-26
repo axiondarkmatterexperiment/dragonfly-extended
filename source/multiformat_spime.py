@@ -391,7 +391,7 @@ def sidecar_reflection_calibration(data_object):
     data_object["fit_shape"]=fit_shape
     data_object["dip_depth"]=dip_depth
     return data_object
-_all_calibrations.append(reflection_calibration)
+_all_calibrations.append(sidecar_reflection_calibration)
 
 
 
