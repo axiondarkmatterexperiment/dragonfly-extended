@@ -366,10 +366,9 @@ def sidecar_fit_reflection(iq_data,frequencies):
     logger.info("dip dept {}".format(del_y_fit))
 
     #turn numpy arrays to lists so that json can iterate through it.
-    gamma_cav_phase = gamma_cav_phase.tolist()
     fit_shape = fit_shape.tolist()
 
-    return [C_fit, gamma_cav_phase, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit]
+    return [C_fit, gamma_cav_phase_fo_from_interp, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit]
 
 
 def semicolon_array_to_json_object(data_string,label_array):
