@@ -131,7 +131,7 @@ def fit_shape_database_hack(x, func, fit_param):
     logger.info("Help fit shape 1")
     gamma_dummy = np.zeros_like(gamma_mag)
     logger.info("Help fit shape 2")
-    fit_shape = np.concatenate(gamma_mag, gamma_dummy)
+    fit_shape = np.concatenate([gamma_mag, gamma_dummy])
     logger.info("Help fit shape 3")
     return fit_shape
 
