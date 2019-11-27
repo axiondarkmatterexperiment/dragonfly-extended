@@ -5,12 +5,14 @@ import numpy as np
 import cmath
 import json
 from scipy.optimize import least_squares
+from scipy.optimize import curve_fit
+from scipy.interpolate import interp1d
+from scipy import stats
 
 from dripline.core import calibrate
 from dripline.core import Spime
 import dripline
 import dragonfly
-from scipy.interpolate import interp1d
 
 import logging
 logger = logging.getLogger('dragonfly.implementations.custom')
@@ -101,12 +103,8 @@ def deconvolve_transmission(f, gamma_mag, gamma_phase, C_fit):
     delay_phase = interp_phase_wo_notch(f)
     gamma_cav_phase = interp_phase(f) - delay_phase
 
-    return gamma_cav_mag, gamma_cav_phase, delay_phase
+    return gamma_cav_mag, gamma_cav_phase
 
-#    interp_mag = interp1d(f, deconvolved_mag, kind='cubic')
-#    interp_sig_mag = interp1d(f, deconvolved_sig_mag, kind='cubic')
-#    interp_phase = interp1d(f, deconvolved_phase, kind='cubic')
-#
 
 def calculate_coupling(gamma_mag_fo, gamma_phase_fo):
     """Calculate coupling to a cavity after reflection fit is done"""
@@ -129,7 +127,7 @@ def calc_red_chisq(x, y, sigma_y, func, fit_param):
 def fit_shape_database_hack(x, func, fit_param):
     """This takes the sidecar fit, which is in power, and returns it into the fit shape that"""
     gamma_mag = np.sqrt(func(x, *fit_param))
-    gamma_dummy = np.zeros_like(ymag)
+    gamma_dummy = np.zeros_like(gamma_mag)
     fit_shape = np.concatenate(gamma_mag, gamma_dummy)
     return fit_shape
 
@@ -338,13 +336,13 @@ def sidecar_fit_reflection(iq_data,frequencies):
 
     logger.info("Help 3")
     pow_fit_param, pow_fit_cov = curve_fit(func_pow_reflected, frequencies, 
-                                           p0=po_guess, sigma= sig_gamma_mag_sq)
+                                           gamma_mag_sq, p0=po_guess, sigma= sig_gamma_mag_sq)
 
     logger.info("Help 4")
     fo_fit, Q_fit, del_y_fit, C_fit = pow_fit_param
 
     logger.info("Help 5")
-    red_chisq = calc_red_chisq(f, gamma_mag_sq, sig_gamma_mag_sq, func_pow_reflected, pow_fit_param)
+    red_chisq = calc_red_chisq(frequencies, gamma_mag_sq, sig_gamma_mag_sq, func_pow_reflected, pow_fit_param)
 
 
     logger.info("Help 6")
@@ -354,7 +352,7 @@ def sidecar_fit_reflection(iq_data,frequencies):
     gamma_cav_mag_fo_from_fit = np.sqrt(func_pow_reflected(fo_fit, *pow_fit_param)*1/C_fit)
     
     logger.info("Help 8")
-    interp_phase = interp1d(f, gamma_cav_phase, kind='cubic')
+    interp_phase = interp1d(frequencies, gamma_cav_phase, kind='cubic')
 
     logger.info("Help 9")
     gamma_cav_phase_fo_from_interp = interp_phase(fo_fit)
@@ -365,7 +363,7 @@ def sidecar_fit_reflection(iq_data,frequencies):
     delay_time = None
 
     logger.info("Help 11")
-    fit_shape = fit_shape_database_hack(f, func_pow_reflected, pow_fit_param)
+    fit_shape = fit_shape_database_hack(frequencies, func_pow_reflected, pow_fit_param)
 
     return [C_fit, gamma_cav_phase, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit]
 
