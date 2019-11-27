@@ -356,7 +356,7 @@ def sidecar_fit_reflection(iq_data,frequencies):
     fit_shape = fit_shape_database_hack(frequencies, func_pow_reflected, pow_fit_param)
 
     logger.info("norm {}".format(C_fit))
-    logger.info("phase {}".format(gamma_cav_phase))
+    logger.info("phase {}".format(gamma_cav_phase_fo_from_interp))
     logger.info("f0 fit {}".format(fo_fit))
     logger.info("Q fit {}".format(Q_fit))
     logger.info("beta fit {}".format(beta))
@@ -366,6 +366,7 @@ def sidecar_fit_reflection(iq_data,frequencies):
     logger.info("dip dept {}".format(del_y_fit))
 
     #turn numpy arrays to lists so that json can iterate through it.
+    gamma_cav_phase_fo_from_interp = gamma_cav_phase_fo_from_interp.tolist() #apparently, json can't deal with numpy objects, even if they are just a single number. I don't know.
     fit_shape = fit_shape.tolist()
 
     return [C_fit, gamma_cav_phase_fo_from_interp, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit]
