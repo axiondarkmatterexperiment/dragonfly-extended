@@ -333,23 +333,38 @@ def sidecar_fit_reflection(iq_data,frequencies):
     gamma_mag = np.sqrt(gamma_mag_sq)
     gamma_phase = np.unwrap(np.angle(gamma_complex))
 
+    logger.info("Help 2")
     po_guess = guess_reflection_fit_params(frequencies, gamma_mag_sq)
+
+    logger.info("Help 3")
     pow_fit_param, pow_fit_cov = curve_fit(func_pow_reflected, frequencies, 
                                            p0=po_guess, sigma= sig_gamma_mag_sq)
+
+    logger.info("Help 4")
     fo_fit, Q_fit, del_y_fit, C_fit = pow_fit_param
+
+    logger.info("Help 5")
     red_chisq = calc_red_chisq(f, gamma_mag_sq, sig_gamma_mag_sq, func_pow_reflected, pow_fit_param)
 
+
+    logger.info("Help 6")
     gamma_cav_mag, gamma_cav_phase = deconvolve_transmission(frequencies, gamma_mag, gamma_phase, C_fit) #this is from data, not from the fitted function.
 
+    logger.info("Help 7")
     gamma_cav_mag_fo_from_fit = np.sqrt(func_pow_reflected(fo_fit, *pow_fit_param)*1/C_fit)
     
+    logger.info("Help 8")
     interp_phase = interp1d(f, gamma_cav_phase, kind='cubic')
+
+    logger.info("Help 9")
     gamma_cav_phase_fo_from_interp = interp_phase(fo_fit)
     
+    logger.info("Help 10")
     beta = calculate_coupling(gamma_cav_mag_fo_from_fit, gamma_cav_phase_fo_from_interp)
     
     delay_time = None
 
+    logger.info("Help 11")
     fit_shape = fit_shape_database_hack(f, func_pow_reflected, pow_fit_param)
 
     return [C_fit, gamma_cav_phase, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit]
@@ -464,6 +479,7 @@ def sidecar_reflection_calibration(data_object):
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
     fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=sidecar_fit_reflection(data_object["iq_data"],freqs)
+    logger.info("Help 1")
     data_object["fit_norm"]=fit_norm
     data_object["fit_phase"]=fit_phase
     data_object["fit_f0"]=fit_f0
@@ -473,6 +489,7 @@ def sidecar_reflection_calibration(data_object):
     data_object["fit_chisq"]=fit_chisq
     data_object["fit_shape"]=fit_shape
     data_object["dip_depth"]=dip_depth
+    logger.info("Help 12")
     return data_object
 _all_calibrations.append(sidecar_reflection_calibration)
 
