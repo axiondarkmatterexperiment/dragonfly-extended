@@ -481,15 +481,23 @@ def sidecar_reflection_calibration(data_object):
     fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=sidecar_fit_reflection(data_object["iq_data"],freqs)
     logger.info("Help 1")
     data_object["fit_norm"]=fit_norm
-    data_object["fit_phase"]=fit_phase
-    data_object["fit_f0"]=fit_f0
-    data_object["fit_Q"]=fit_Q
-    data_object["fit_beta"]=fit_beta
-    data_object["fit_delay_time"]=fit_delay_time
-    data_object["fit_chisq"]=fit_chisq
-    data_object["fit_shape"]=fit_shape
-    data_object["dip_depth"]=dip_depth
     logger.info("Help 2")
+    data_object["fit_phase"]=fit_phase
+    logger.info("Help 3")
+    data_object["fit_f0"]=fit_f0
+    logger.info("Help 4")
+    data_object["fit_Q"]=fit_Q
+    logger.info("Help 5")
+    data_object["fit_beta"]=fit_beta
+    logger.info("Help 6")
+    data_object["fit_delay_time"]=fit_delay_time
+    logger.info("Help 7")
+    data_object["fit_chisq"]=fit_chisq
+    logger.info("Help 8")
+    data_object["fit_shape"]=fit_shape
+    logger.info("Help 9")
+    data_object["dip_depth"]=dip_depth
+    logger.info("Help 10")
     return data_object
 _all_calibrations.append(sidecar_reflection_calibration)
 
