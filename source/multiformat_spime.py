@@ -354,18 +354,16 @@ def sidecar_fit_reflection(iq_data,frequencies):
     delay_time = None
 
     logger.info("Help 11")
-    fit_shape = fit_shape_database_hack(frequencies, func_pow_reflected, pow_fit_param)
-    logger.info("Norm: {}\n
-                Phase: {}\n
-                fit f0: {}\n
-                fit Q: {}\n
-                fit beta: {}\n
-                fit delay time: {}\n
-                fit chisq: {}\n
-                fit shape: {}\n
-                dip depth: {}\n".format(C_fit, gamma_cav_phase, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit))
 
-
+    logger.info("norm {}".format(C_fit))
+    logger.info("phase {}".format(gamma_cav_phase))
+    logger.info("f0 fit {}".format(fo_fit))
+    logger.info("Q fit {}".format(Q_fit))
+    logger.info("beta fit {}".format(beta))
+    logger.info("delay time fit {}".format(delay_time))
+    logger.info("reduced chi-square {}".format(red_chisq))
+    logger.info("fit shape {}".format(fit_shape))
+    logger.info("dip dept {}".format(del_y_fit))
     logger.info("Help 2")
 
     return [C_fit, gamma_cav_phase, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit]
