@@ -364,7 +364,6 @@ def sidecar_fit_reflection(iq_data,frequencies):
     logger.info("reduced chi-square {}".format(red_chisq))
     logger.info("fit shape {}".format(fit_shape))
     logger.info("dip dept {}".format(del_y_fit))
-    logger.info("Help 2")
 
     return [C_fit, gamma_cav_phase, fo_fit, Q_fit, beta, delay_time, red_chisq, fit_shape, del_y_fit]
 
