@@ -352,7 +352,7 @@ def sidecar_fit_reflection(iq_data,frequencies):
     
     beta = calculate_coupling(gamma_cav_mag_fo_from_fit, gamma_cav_phase_fo_from_interp)
     
-    delay_time = None
+    delay_time = -1
     fit_shape = fit_shape_database_hack(frequencies, func_pow_reflected, pow_fit_param)
 
     logger.info("norm {}".format(C_fit))
