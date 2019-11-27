@@ -325,7 +325,10 @@ def sidecar_fit_reflection(iq_data,frequencies):
     if len(frequencies)<16:
         raise ValueError("not enough points to fit transmission, need 16, got {}".format(len(powers)))
 
-    gamma_mag_sq=iq_packed2powers(iq_data)
+
+    gamma_r, gamma_i = unpack_iq_data(iq_data)
+    gamma_complex = gamma_r+gamma_i*1j
+    gamma_mag_sq= gamma_r**2 + gamma_i**2
     sig_gamma_mag_sq = estimate_power_uncertainty(gamma_mag_sq)
     gamma_mag = np.sqrt(gamma_mag_sq)
     gamma_phase = np.unwrap(np.angle(gamma_complex))
