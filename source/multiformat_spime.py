@@ -129,7 +129,7 @@ def fit_shape_database_hack(x, func, fit_param):
     gamma_mag = np.sqrt(func(x, *fit_param))
 
     gamma_dummy = np.zeros_like(gamma_mag)
-    fit_shape = np.concatenate([gamma_mag, gamma_dummy])
+    fit_shape = repack_iq_data(gamma_mag, gamma_dummy)
     return fit_shape
 
 def transmission_power_shape(f,norm,f0,Q,noise):
