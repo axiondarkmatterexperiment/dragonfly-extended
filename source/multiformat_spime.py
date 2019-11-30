@@ -83,7 +83,6 @@ def guess_q(f, y):
     fc = f[ind_fc]  # obtain resonant frequency
 
     # look at the left of the resonance
-    left_f = f[:ind_fc]
     left_y = y[:ind_fc]
     dy = guess_dy(y)
     C = guess_offset(y)
@@ -144,7 +143,7 @@ def estimate_power_uncertainty(power):
     a correct assumption, but probably good enough for now."""
     pow_ends = get_arr_ends(power, 5)
     rel_sig_pow = np.std(pow_ends)/np.mean(pow_ends)
-    sig_power = power*pow_fractional_std
+    sig_power = power*rel_sig_pow
     return sig_power
 
 
