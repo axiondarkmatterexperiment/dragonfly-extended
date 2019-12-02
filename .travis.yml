@@ -20,6 +20,8 @@ branches:
     - develop
     - /^hotfix/.*$/
     - /^v\d+\.\d+\.\d+(-S*)?$/
+    # build anything ending with /build
+    - /^.*\/build$/
 
 jobs:
   include:
