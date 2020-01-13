@@ -378,7 +378,7 @@ def sidecar_fit_reflection(iq_data, frequencies):
                                func_pow_reflected, pow_fit_param)
 
     # Gam_c is reflection coeffient Gamma of the cavity
-    Gam_c_mag, Gam_c_phase = deconvolve_transmission(frequencies, Gamma_mag,
+    Gam_c_mag, Gam_c_phase = sc_reflection_deconvolve_line(frequencies, Gamma_mag,
                                                      Gamma_phase, C_fit)
 
     # Calculates magnitude of Gamma_cavity by plugging resonant frequency into
