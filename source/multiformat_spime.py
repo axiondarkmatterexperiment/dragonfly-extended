@@ -57,13 +57,13 @@ def find_nearest_idx(array, value):
     return idx
 
 
-def guess_fo(f, Gamma2):
+def sc_guess_reflection_fo(f, Gamma2):
     """Guesses the resonant frequency"""
     ind_fo = np.argmin(Gamma2)  # find index of resonant frequency
     return f[ind_fo]
 
 
-def guess_offset(y):
+def sc_guess_offset(y):
     """Gueses normalization for reflection fit."""
     low_filt_perc = 0.33
     # cut out bottom low_filt_perc of y values. Basically want to filter
@@ -72,20 +72,20 @@ def guess_offset(y):
     return np.median(y_filtered)
 
 
-def guess_dy(y):
+def sc_guess_reflection_dy(y):
     """Returns a guess for the depth of the Lorentzian"""
-    return guess_offset(y) - np.min(y)
+    return sc_guess_offset(y) - np.min(y)
 
 
-def guess_q(f, y):
+def sc_guess_reflection_q(f, y):
     """Returns a guess for the Q of the Lorentzian"""
     ind_fc = np.argmin(y)  # find index of resonant frequency
     fc = f[ind_fc]  # obtain resonant frequency
 
     # look at the left of the resonance
     left_y = y[:ind_fc]
-    dy = guess_dy(y)
-    C = guess_offset(y)
+    dy = sc_guess_reflection_dy(y)
+    C = sc_guess_offset(y)
     ind_fwhm = find_nearest_idx(left_y, C-dy/2)
 
     # find distance between fwhm and resonance
@@ -96,13 +96,13 @@ def guess_q(f, y):
     return Q_guess
 
 
-def guess_reflection_fit_params(f, Gamma2):
+def sc_guess_reflection_fit_params(f, Gamma2):
     """Finds an initial guess for the fittings parameters of reflected
     power"""
-    fo_guess = guess_fo(f, Gamma2)
-    Q_guess = guess_q(f, Gamma2)
-    dy_guess = guess_dy(Gamma2)
-    C_guess = guess_offset(Gamma2)
+    fo_guess = sc_guess_reflection_fo(f, Gamma2)
+    Q_guess = sc_guess_reflection_q(f, Gamma2)
+    dy_guess = sc_guess_reflection_dy(Gamma2)
+    C_guess = sc_guess_offset(Gamma2)
     return fo_guess, Q_guess, dy_guess, C_guess
 
 
@@ -116,9 +116,9 @@ def get_arr_ends(x, n_end_elements):
     return np.concatenate([x[:n_end_elements], x[-n_end_elements:]])
 
 
-def deconvolve_transmission(f, Gamma_mag, Gamma_phase, C_fit):
+def sc_reflection_deconvolve_line(f, Gamma_mag, Gamma_phase, C_fit):
     """Finds the reflection coefficient off of the cavity by deconvolving
-    the """
+    the line path"""
     Gamma_cav_mag = Gamma_mag*np.sqrt(1/C_fit)
 
     interp_phase = interp1d(f, Gamma_phase, kind='cubic')
@@ -131,21 +131,17 @@ def deconvolve_transmission(f, Gamma_mag, Gamma_phase, C_fit):
     return Gamma_cav_mag, Gamma_cav_phase
 
 
-def calculate_coupling(mag_fo, phase_fo):
+def sc_calculate_coupling(mag_fo, phase_fo):
     """Calculate coupling to a cavity after reflection fit is done"""
     sgn = np.sign(phase_fo - np.pi)
     beta = (1+sgn*mag_fo)/(1-sgn*mag_fo)
     return beta
 
 
-def estimate_power_uncertainty(power):
-    """Assume relative uncertainty in power is constant. This is not
-    a correct assumption, but probably good enough for now."""
-    pow_ends = get_arr_ends(power, 5)
-    rel_sig_pow = np.std(pow_ends)/np.mean(pow_ends)
-    sig_power = power*rel_sig_pow
+def sc_estimate_power_uncertainty(power):
+    """Assume sqrt (like counting experiment)"""
+    sig_power = np.sqrt(power)
     return sig_power
-
 
 def calc_red_chisq(x, y, sigma_y, func, fit_param):
     """Calculates the reduced chi-square"""
@@ -156,7 +152,7 @@ def calc_red_chisq(x, y, sigma_y, func, fit_param):
     return red_chisq
 
 
-def fit_shape_database_hack(x, func, fit_param):
+def sc_reflection_fit_shape_database_hack(x, func, fit_param):
     """This takes the sidecar fit, which is in power, and returns it into the
     fit shape that the database expects. It expects iq series [r,i,r,i....]"""
     Gamma_mag = np.sqrt(func(x, *fit_param))
@@ -366,11 +362,11 @@ def sidecar_fit_reflection(iq_data, frequencies):
     Gamma_r, Gamma_i = unpack_iq_data(iq_data)
     Gamma_complex = Gamma_r+Gamma_i*1j
     Gamma_mag_sq = Gamma_r**2 + Gamma_i**2
-    sig_Gamma_mag_sq = estimate_power_uncertainty(Gamma_mag_sq)
+    sig_Gamma_mag_sq = sc_estimate_power_uncertainty(Gamma_mag_sq)
     Gamma_mag = np.sqrt(Gamma_mag_sq)
     Gamma_phase = np.unwrap(np.angle(Gamma_complex))
 
-    po_guess = guess_reflection_fit_params(frequencies, Gamma_mag_sq)
+    po_guess = sc_guess_reflection_fit_params(frequencies, Gamma_mag_sq)
 
     pow_fit_param, pow_fit_cov = curve_fit(func_pow_reflected, frequencies,
                                            Gamma_mag_sq, p0=po_guess,
@@ -382,7 +378,7 @@ def sidecar_fit_reflection(iq_data, frequencies):
                                func_pow_reflected, pow_fit_param)
 
     # Gam_c is reflection coeffient Gamma of the cavity
-    Gam_c_mag, Gam_c_phase = deconvolve_transmission(frequencies, Gamma_mag,
+    Gam_c_mag, Gam_c_phase = sc_reflection_deconvolve_line(frequencies, Gamma_mag,
                                                      Gamma_phase, C_fit)
 
     # Calculates magnitude of Gamma_cavity by plugging resonant frequency into
@@ -395,13 +391,13 @@ def sidecar_fit_reflection(iq_data, frequencies):
     # data.
     Gam_c_phase_fo = Gam_c_interp_phase(fo_fit)
     
-    beta = calculate_coupling(Gam_c_mag_fo, Gam_c_phase_fo)
+    beta = sc_calculate_coupling(Gam_c_mag_fo, Gam_c_phase_fo)
     
     # I don't get a delay time through this analysis. Just setting to -1 so I 
     # can match Gray's database.
     delay_time = -1 
 
-    fit_shape = fit_shape_database_hack(frequencies, func_pow_reflected,
+    fit_shape = sc_reflection_fit_shape_database_hack(frequencies, func_pow_reflected,
                                         pow_fit_param)
 
     logger.info("norm {}".format(C_fit))
@@ -534,16 +530,27 @@ def sidecar_reflection_calibration(data_object):
                         data_object["stop_frequency"],
                         int(len(data_object["iq_data"])/2))
 
+    logger.info("help 10")
     fit_output = sidecar_fit_reflection(data_object["iq_data"], freqs)
+    logger.info("help 0")
     data_object["fit_norm"] = fit_output[0]
+    logger.info("help 1")
     data_object["fit_phase"] = fit_output[1]
+    logger.info("help 2")
     data_object["fit_f0"] = fit_output[2]
+    logger.info("help 3")
     data_object["fit_Q"] = fit_output[3]
+    logger.info("help 4")
     data_object["fit_beta"] = fit_output[4]
+    logger.info("help 5")
     data_object["fit_delay_time"] = fit_output[5]
+    logger.info("help 6")
     data_object["fit_chisq"] = fit_output[6]
+    logger.info("help 7")
     data_object["fit_shape"] = fit_output[7]
+    logger.info("help 8")
     data_object["dip_depth"] = fit_output[8]
+    logger.info("help 9")
     return data_object
 _all_calibrations.append(sidecar_reflection_calibration)
 
