@@ -573,7 +573,7 @@ def sidecar_transmission_calibration(data_object):
     data_object["fit_shape"]=fit_output[5]
     return data_object
 #return data
-_all_calibrations.append(transmission_calibration)
+_all_calibrations.append(sidecar_transmission_calibration)
     
 def reflection_calibration(data_object):
     """takes a network analyzer output of format 
