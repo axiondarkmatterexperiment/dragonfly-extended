@@ -72,9 +72,9 @@ def sc_guess_offset(y):
     return np.median(y_filtered)
 
 
-def sc_guess_dy(y):
+def sc_guess_reflection_dy(y):
     """Returns a guess for the depth of the Lorentzian"""
-    return guess_offset(y) - np.min(y)
+    return sc_guess_offset(y) - np.min(y)
 
 
 def sc_guess_reflection_q(f, y):
@@ -84,8 +84,8 @@ def sc_guess_reflection_q(f, y):
 
     # look at the left of the resonance
     left_y = y[:ind_fc]
-    dy = guess_dy(y)
-    C = guess_offset(y)
+    dy = sc_guess_reflection_dy(y)
+    C = sc_guess_offset(y)
     ind_fwhm = find_nearest_idx(left_y, C-dy/2)
 
     # find distance between fwhm and resonance
@@ -99,9 +99,9 @@ def sc_guess_reflection_q(f, y):
 def sc_guess_reflection_fit_params(f, Gamma2):
     """Finds an initial guess for the fittings parameters of reflected
     power"""
-    fo_guess = sc_guess_fo(f, Gamma2)
-    Q_guess = sc_guess_q(f, Gamma2)
-    dy_guess = sc_guess_dy(Gamma2)
+    fo_guess = sc_guess_reflection_fo(f, Gamma2)
+    Q_guess = sc_guess_reflection_q(f, Gamma2)
+    dy_guess = sc_guess_reflection_dy(Gamma2)
     C_guess = sc_guess_offset(Gamma2)
     return fo_guess, Q_guess, dy_guess, C_guess
 
@@ -362,7 +362,7 @@ def sidecar_fit_reflection(iq_data, frequencies):
     Gamma_r, Gamma_i = unpack_iq_data(iq_data)
     Gamma_complex = Gamma_r+Gamma_i*1j
     Gamma_mag_sq = Gamma_r**2 + Gamma_i**2
-    sig_Gamma_mag_sq = estimate_power_uncertainty(Gamma_mag_sq)
+    sig_Gamma_mag_sq = sc_estimate_power_uncertainty(Gamma_mag_sq)
     Gamma_mag = np.sqrt(Gamma_mag_sq)
     Gamma_phase = np.unwrap(np.angle(Gamma_complex))
 
@@ -391,13 +391,13 @@ def sidecar_fit_reflection(iq_data, frequencies):
     # data.
     Gam_c_phase_fo = Gam_c_interp_phase(fo_fit)
     
-    beta = calculate_coupling(Gam_c_mag_fo, Gam_c_phase_fo)
+    beta = sc_calculate_coupling(Gam_c_mag_fo, Gam_c_phase_fo)
     
     # I don't get a delay time through this analysis. Just setting to -1 so I 
     # can match Gray's database.
     delay_time = -1 
 
-    fit_shape = fit_shape_database_hack(frequencies, func_pow_reflected,
+    fit_shape = sc_reflection_fit_shape_database_hack(frequencies, func_pow_reflected,
                                         pow_fit_param)
 
     logger.info("norm {}".format(C_fit))
@@ -526,8 +526,6 @@ def sidecar_reflection_calibration(data_object):
         fit_chisq: <number>
           }
     """
-    logger.info("can i even do anything useful")
-    return data_object
     freqs = np.linspace(data_object["start_frequency"],
                         data_object["stop_frequency"],
                         int(len(data_object["iq_data"])/2))
