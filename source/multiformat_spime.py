@@ -530,27 +530,16 @@ def sidecar_reflection_calibration(data_object):
                         data_object["stop_frequency"],
                         int(len(data_object["iq_data"])/2))
 
-    logger.info("help 10")
     fit_output = sidecar_fit_reflection(data_object["iq_data"], freqs)
-    logger.info("help 0")
     data_object["fit_norm"] = fit_output[0]
-    logger.info("help 1")
     data_object["fit_phase"] = fit_output[1]
-    logger.info("help 2")
     data_object["fit_f0"] = fit_output[2]
-    logger.info("help 3")
     data_object["fit_Q"] = fit_output[3]
-    logger.info("help 4")
     data_object["fit_beta"] = fit_output[4]
-    logger.info("help 5")
     data_object["fit_delay_time"] = fit_output[5]
-    logger.info("help 6")
     data_object["fit_chisq"] = fit_output[6]
-    logger.info("help 7")
     data_object["fit_shape"] = fit_output[7]
-    logger.info("help 8")
     data_object["dip_depth"] = fit_output[8]
-    logger.info("help 9")
     return data_object
 _all_calibrations.append(sidecar_reflection_calibration)
 
