@@ -478,6 +478,36 @@ def transmission_calibration(data_object):
     return data_object
 #return data
 _all_calibrations.append(transmission_calibration)
+
+def sidecar_transmission_calibration(data_object):
+    """takes a network analyzer output of format 
+            {
+        start_frequency: <number>
+        stop_frequency: <number>
+        iq_data: <array of numbers, packed i,r,i,r>
+            }
+        and augments it with a transmission fit
+          {
+        fit_f0: <number>
+        fit_Q: <number>
+        fit_norm: <number>
+        fit_noise: <number>
+        fit_chisq: <number>
+          }
+    """
+    freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
+    powers=iq_packed2powers(data_object["iq_data"])
+    fit_norm,fit_f0,fit_Q,fit_noise,fit_chisq,fit_shape=fit_transmission(powers,freqs)
+    fit_output = sidecar_fit_transmission(powers,freqs)
+    data_object["fit_norm"]=fit_output[0]
+    data_object["fit_f0"]=fit_output[1]
+    data_object["fit_Q"]=fit_output[2]
+    data_object["fit_noise"]=fit_output[3]
+    data_object["fit_chisq"]=fit_output[4]
+    data_object["fit_shape"]=fit_output[5]
+    return data_object
+#return data
+_all_calibrations.append(transmission_calibration)
     
 def reflection_calibration(data_object):
     """takes a network analyzer output of format 
