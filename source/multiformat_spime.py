@@ -57,36 +57,65 @@ def find_nearest_idx(array, value):
     return idx
 
 
-def sc_guess_reflection_fo(f, Gamma2):
+def sc_guess_fo(f, Gamma2, measurement_type):
     """Guesses the resonant frequency"""
-    ind_fo = np.argmin(Gamma2)  # find index of resonant frequency
+    if measurement_type == "reflection":
+        ind_fo = np.argmin(Gamma2)  # find index of resonant frequency
+    elif measurement_type == "transmission":
+        ind_fo = np.argmax(Gamma2)  # find index of resonant frequency
+    else:
+        raise Exception("not a valid measurement type")
     return f[ind_fo]
 
 
-def sc_guess_offset(y):
+def sc_guess_offset(y, measurement_type):
     """Gueses normalization for reflection fit."""
-    low_filt_perc = 0.33
+    filt_perc = 0.33
     # cut out bottom low_filt_perc of y values. Basically want to filter
     # out the notch a bit.
-    y_filtered = stats.trim1(y, low_filt_perc, tail='left')
+    if measurement_type == "reflection":
+        y_filtered = stats.trim1(y, filt_perc, tail='left')
+    elif measurement_type == "transmission":
+        y_filtered = stats.trim1(y, filt_perc, tail='right')
+    else:
+        raise Exception("not a valid measurement type")
     return np.median(y_filtered)
 
 
-def sc_guess_reflection_dy(y):
-    """Returns a guess for the depth of the Lorentzian"""
-    return sc_guess_offset(y) - np.min(y)
+def sc_guess_dy(y, measurement_type):
+    """Returns a guess for the depth of the Lorentzian. The depth is always a positive number"""
+    if measurement_type == "reflection":
+        depth = sc_guess_offset(y, measurement_type) - np.min(y)
+    elif measurement_type == "transmission":
+        depth = np.max(y) - sc_guess_offset(y, measurement_type)
+    else:
+        raise Exception("not a valid measurement type")
+    return depth
 
 
-def sc_guess_reflection_q(f, y):
+def sc_guess_q(f, y, measurement_type):
     """Returns a guess for the Q of the Lorentzian"""
-    ind_fc = np.argmin(y)  # find index of resonant frequency
+
+    # find index of resonant frequency
+    if measurement_type=="reflection":
+        ind_fc = np.argmin(y)  
+    elif measurement_type=="transmission":
+        ind_fc = np.argmax(y)  
+    else:
+        raise Exception("not a valid measurement type")
     fc = f[ind_fc]  # obtain resonant frequency
 
     # look at the left of the resonance
+    dy = sc_guess_dy(y, measurement_type)
+    C = sc_guess_offset(y, measurement_type)
     left_y = y[:ind_fc]
-    dy = sc_guess_reflection_dy(y)
-    C = sc_guess_offset(y)
-    ind_fwhm = find_nearest_idx(left_y, C-dy/2)
+    if measurement_type=="reflection":
+        ind_fwhm = find_nearest_idx(left_y, C-dy/2)
+    elif measurement_type=="transmission":
+        ind_fwhm = find_nearest_idx(left_y, C+dy/2)
+    else:
+        ind_fwhm = find_nearest_idx(left_y, C+dy/2)
+        raise Exception("not a valid measurement type")
 
     # find distance between fwhm and resonance
     f1 = f[ind_fwhm]
@@ -96,19 +125,23 @@ def sc_guess_reflection_q(f, y):
     return Q_guess
 
 
-def sc_guess_reflection_fit_params(f, Gamma2):
+def sc_guess_fit_params(f, power, measurement_type):
     """Finds an initial guess for the fittings parameters of reflected
     power"""
-    fo_guess = sc_guess_reflection_fo(f, Gamma2)
-    Q_guess = sc_guess_reflection_q(f, Gamma2)
-    dy_guess = sc_guess_reflection_dy(Gamma2)
-    C_guess = sc_guess_offset(Gamma2)
+    fo_guess = sc_guess_fo(f, power, measurement_type)
+    Q_guess = sc_guess_q(f, power, measurement_type)
+    dy_guess = sc_guess_dy(power, measurement_type)
+    C_guess = sc_guess_offset(power, measurement_type)
     return fo_guess, Q_guess, dy_guess, C_guess
 
 
-def func_pow_reflected(f, fo, Q, del_y, C):
+def func_sc_pow_reflected(f, fo, Q, del_y, C):
     """The reflected power. Just a Lorentzian"""
     return -(fo/(2*Q))**2*del_y/((f-fo)**2+(fo/(2*Q))**2)+C
+
+def func_sc_pow_transmitted(f, fo, Q, del_y, C):
+    """The reflected power. Just a Lorentzian"""
+    return (fo/(2*Q))**2*del_y/((f-fo)**2+(fo/(2*Q))**2)+C
 
 
 def get_arr_ends(x, n_end_elements):
@@ -251,6 +284,7 @@ def fit_transmission(powers,frequencies):
     #return norm,f0,Q,noise, chi square, fit shape
     return [res.x[0],res.x[1],res.x[2],res.x[3],chisq,fit_shape]
 
+
 def fit_reflection(iq_data,frequencies):
     """
         Performs a least-squares fit on a reflection measurement, an array of powers and frequencies
@@ -346,6 +380,43 @@ def fit_reflection(iq_data,frequencies):
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
     return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape,dip_depth]
 
+def sidecar_fit_transmission(powers, frequencies):
+    """fits sidecar reflection data. For now, it is separate function from 
+    the main experiment so as not to disturb it.
+    Gamma is the measured reflection coefficient"""
+
+    if len(frequencies)!=len(powers):
+        raise ValueError("point count not right nfreqs {} npows {}".format(len(frequencies),len(powers)))
+    if len(frequencies)<16:
+        raise ValueError("not enough points to fit transmission, need 16, got {}".format(len(powers)))
+
+    sig_powers = sc_estimate_power_uncertainty(powers)
+    po_guess = sc_guess_fit_params(frequencies, powers, "transmission")
+
+    pow_fit_param, pow_fit_cov = curve_fit(func_sc_pow_transmitted, frequencies,
+                                           powers, p0=po_guess,
+                                           sigma=sig_powers)
+
+    fo_fit, Q_fit, del_y_fit, C_fit = pow_fit_param
+
+    red_chisq = calc_red_chisq(frequencies, powers, sig_powers,
+                               func_sc_pow_transmitted, pow_fit_param)
+
+    fit_shape = func_sc_pow_transmitted(frequencies, *pow_fit_param)
+
+    logger.info("fit norm {}".format(del_y_fit))
+    logger.info("f0 fit {}".format(fo_fit))
+    logger.info("Q fit {}".format(Q_fit))
+    logger.info("Background level {}".format(C_fit))
+    logger.info("reduced chi-square {}".format(red_chisq))
+
+    # turn numpy arrays to lists so that json can iterate through it.
+    # apparently, json can't deal with numpy objects, even if they are just a
+    # single number. I don't know.
+    fit_shape = fit_shape.tolist()
+
+    return [del_y_fit, fo_fit, Q_fit, C_fit, red_chisq, fit_shape]
+
 
 def sidecar_fit_reflection(iq_data, frequencies):
     """fits sidecar reflection data. For now, it is separate function from 
@@ -366,24 +437,23 @@ def sidecar_fit_reflection(iq_data, frequencies):
     Gamma_mag = np.sqrt(Gamma_mag_sq)
     Gamma_phase = np.unwrap(np.angle(Gamma_complex))
 
-    po_guess = sc_guess_reflection_fit_params(frequencies, Gamma_mag_sq)
+    po_guess = sc_guess_fit_params(frequencies, Gamma_mag_sq, "reflection")
 
-    pow_fit_param, pow_fit_cov = curve_fit(func_pow_reflected, frequencies,
+    pow_fit_param, pow_fit_cov = curve_fit(func_sc_pow_reflected, frequencies,
                                            Gamma_mag_sq, p0=po_guess,
                                            sigma=sig_Gamma_mag_sq)
 
     fo_fit, Q_fit, del_y_fit, C_fit = pow_fit_param
 
     red_chisq = calc_red_chisq(frequencies, Gamma_mag_sq, sig_Gamma_mag_sq,
-                               func_pow_reflected, pow_fit_param)
+                               func_sc_pow_reflected, pow_fit_param)
 
     # Gam_c is reflection coeffient Gamma of the cavity
-    Gam_c_mag, Gam_c_phase = sc_reflection_deconvolve_line(frequencies, Gamma_mag,
-                                                     Gamma_phase, C_fit)
-
+    Gam_c_mag, Gam_c_phase = sc_reflection_deconvolve_line(frequencies, Gamma_mag, 
+                                                           Gamma_phase, C_fit)
     # Calculates magnitude of Gamma_cavity by plugging resonant frequency into
     # fitted function
-    Gam_c_mag_fo = np.sqrt(func_pow_reflected(fo_fit, *pow_fit_param)*1/C_fit)
+    Gam_c_mag_fo = np.sqrt(func_sc_pow_reflected(fo_fit, *pow_fit_param)*1/C_fit)
     
     Gam_c_interp_phase = interp1d(frequencies, Gam_c_phase, kind='cubic')
 
@@ -397,7 +467,7 @@ def sidecar_fit_reflection(iq_data, frequencies):
     # can match Gray's database.
     delay_time = -1 
 
-    fit_shape = sc_reflection_fit_shape_database_hack(frequencies, func_pow_reflected,
+    fit_shape = sc_reflection_fit_shape_database_hack(frequencies, func_sc_pow_reflected,
                                         pow_fit_param)
 
     logger.info("norm {}".format(C_fit))
@@ -478,6 +548,35 @@ def transmission_calibration(data_object):
     return data_object
 #return data
 _all_calibrations.append(transmission_calibration)
+
+def sidecar_transmission_calibration(data_object):
+    """takes a network analyzer output of format 
+            {
+        start_frequency: <number>
+        stop_frequency: <number>
+        iq_data: <array of numbers, packed i,r,i,r>
+            }
+        and augments it with a transmission fit
+          {
+        fit_f0: <number>
+        fit_Q: <number>
+        fit_norm: <number>
+        fit_noise: <number>
+        fit_chisq: <number>
+          }
+    """
+    freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
+    powers=iq_packed2powers(data_object["iq_data"])
+    fit_output = sidecar_fit_transmission(powers,freqs)
+    data_object["fit_norm"]=fit_output[0]
+    data_object["fit_f0"]=fit_output[1]
+    data_object["fit_Q"]=fit_output[2]
+    data_object["fit_noise"]=fit_output[3]
+    data_object["fit_chisq"]=fit_output[4]
+    data_object["fit_shape"]=fit_output[5]
+    return data_object
+#return data
+_all_calibrations.append(sidecar_transmission_calibration)
     
 def reflection_calibration(data_object):
     """takes a network analyzer output of format 
