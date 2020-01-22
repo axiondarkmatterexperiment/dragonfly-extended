@@ -122,6 +122,13 @@ def x89346_2wirep3(resistance):
     return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
 _all_calibrations.append(x89346_2wirep3)
 
+def x89346(resistance): 
+    '''Calibration for a cernox'''
+    values_x= [7783., 441., 106.]
+    values_y= [4.2, 77., 305.]
+    return piecewise_cal(values_x, values_y, abs(resistance), log_x=True, log_y=True)
+_all_calibrations.append(x89346)
+
 def x84174(resistance):
     '''Calibration for a cernox'''
     values_x = [60.8, 187., 1607.]
