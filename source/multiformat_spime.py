@@ -353,9 +353,9 @@ def fit_reflection(iq_data,frequencies):
         if beta<0:
             resid[nfreq+2]=nfreq*10*beta
             beta=0
-        if beta>2:
+        if beta>4:
             resid[nfreq+2]=nfreq*10*(beta-2)
-            beta=2
+            beta=4
         #Prior 4: delay_time is positive and small
         if delay_time<0:
             resid[nfreq+3]=-delay_time
