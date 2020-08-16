@@ -166,7 +166,7 @@ def sc_reflection_deconvolve_line(f, Gamma_mag, Gamma_phase, C_fit):
 
 def sc_calculate_coupling(mag_fo, phase_fo):
     """Calculate coupling to a cavity after reflection fit is done"""
-    sgn = np.sign(phase_fo) ## phase_fo has range of [-pi,pi]
+    sgn = np.sign(phase_fo - np.pi)
     beta = (1+sgn*mag_fo)/(1-sgn*mag_fo)
     return beta
 
@@ -435,7 +435,7 @@ def sidecar_fit_reflection(iq_data, frequencies):
     Gamma_mag_sq = Gamma_r**2 + Gamma_i**2
     sig_Gamma_mag_sq = sc_estimate_power_uncertainty(Gamma_mag_sq)
     Gamma_mag = np.sqrt(Gamma_mag_sq)
-    Gamma_phase = np.angle(Gamma_complex)
+    Gamma_phase = np.unwrap(np.angle(Gamma_complex))
 
     po_guess = sc_guess_fit_params(frequencies, Gamma_mag_sq, "reflection")
 
