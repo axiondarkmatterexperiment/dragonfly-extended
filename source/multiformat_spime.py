@@ -215,6 +215,14 @@ def reflection_iq_shape(f,norm,phase,f0,Q,beta,delay_time):
     phase=cmath.exp(complex(0,phase+delay_time*(f-f0)))
     return response*phase
 
+def reflection_iq_shape_their(f,norm,phase,f0,Q,beta,delay_time):
+    """returns the expected [i,q] values from a reflection measurement
+         """
+    Q_0 = Q*(1+beta) ## Convert to Unloaded Q-factor (Q_0) from Loaded Q-factor (Q)
+    delta=Q_0*(f-f0)/f0
+    phase=np.exp(complex(0,phase+delay_time*(f-f0)))
+    return norm*phase*(beta-1-complex(0,2*delta))/(beta+1+complex(0,2*delta))
+
 
 def fit_transmission(powers,frequencies):
     """
@@ -348,13 +356,13 @@ def fit_reflection(iq_data,frequencies):
         if Q>Q_max:
             resid[nfreq+1]=nfreq*10*(Q-Q_max)/Q_min
             Q=Q_max
-        #Prior 3: beta is between 0 and 2
+        #Prior 3: beta is between 0 and 10
         if beta<0:
             resid[nfreq+2]=nfreq*10*beta
             beta=0
-        if beta>4:
-            resid[nfreq+2]=nfreq*10*(beta-2)
-            beta=4
+        if beta>10:
+            resid[nfreq+2]=nfreq*10*(beta-10)
+            beta=10
         #Prior 4: delay_time is positive and small
         if delay_time<0:
             resid[nfreq+3]=-delay_time
@@ -364,7 +372,7 @@ def fit_reflection(iq_data,frequencies):
             resid[nfreq+3]=max_delay_time-delay_time
             delay_time=max_delay_time
         for i in range(int(nfreq/2)):
-            yp=reflection_iq_shape(frequencies[i],norm,phase,f0,Q,beta,delay_time)
+            yp=reflection_iq_shape_their(frequencies[i],norm,phase,f0,Q,beta,delay_time)
             resid[2*i]=(yp.real-iq_data[2*i])/uncertainty
             resid[2*i+1]=(yp.imag-iq_data[2*i+1])/uncertainty
         return resid
@@ -373,7 +381,7 @@ def fit_reflection(iq_data,frequencies):
     #calculate shape
     fit_shape=[]
     for i in range(len(frequencies)):
-        yp=reflection_iq_shape(frequencies[i],res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5])
+        yp=reflection_iq_shape_their(frequencies[i],res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5])
         fit_shape.append(yp.real)
         fit_shape.append(yp.imag)
     #TODO at this point change to dict
