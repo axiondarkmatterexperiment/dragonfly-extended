@@ -18,7 +18,7 @@ logger = logging.getLogger('dragonfly.implementations.custom')
 
 _all_calibrations = []
 
-
+ 
 def iq_packed2powers(iq_data):
     """Turn iq data in [r,i,r,i,r,i...] format into an array of powers"""
     powers = np.zeros(int(len(iq_data)/2))
