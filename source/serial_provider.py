@@ -31,7 +31,7 @@ __all__.append('SerialProvider')
 @fancy_doc
 class SerialProvider(Provider):
     def __init__(self,
-                 port='/dev/ttyUSB2',
+                 port='/dev/ttyUSB1',
                  baudrate=9600,
                  parity=serial.PARITY_NONE,
                  stopbits=serial.STOPBITS_ONE,
@@ -54,11 +54,21 @@ class SerialProvider(Provider):
         '''
         Provider.__init__(self, **kwargs)
 
-        self.serial = serial.Serial()
+        self.alock = threading.Lock()
+        self.serial = serial.Serial(
+        port='/dev/ttyUSB1',
+        baudrate=9600,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        bytesize=serial.EIGHTBITS
+        )
         self.port = port
         self.baudrate = baudrate
         self.parity = parity
         self.bytesize = bytesize
+        self.serial.isOpen()
+        the_command='gain(4)=12\r\n'
+        self.serial.write(the_command.encode())
         
     def send(self, commands, **kwargs):
         '''
@@ -74,29 +84,10 @@ class SerialProvider(Provider):
         self.alock.acquire()
 
         try:
-            data = self._send_commands(commands)
-        except socket.error as err:
-            logger.warning("socket.error <{}> received, attempting reconnect".format(err))
-            self._reconnect()
-            data = self._send_commands(commands)
-            logger.critical("Ethernet connection reestablished")
-        except exceptions.DriplineHardwareResponselessError as err:
-            logger.critical(str(err))
-            try:
-                self._reconnect()
-                data = self._send_commands(commands)
-                logger.critical("Query successful after ethernet connection recovered")
-            except exceptions.DriplineHardwareConnectionError:
-                logger.critical("Ethernet reconnect failed, dead socket")
-                raise exceptions.DriplineHardwareConnectionError("Broken ethernet socket")
-            except exceptions.DriplineHardwareResponselessError as err:
-                logger.critical("Query failed after successful ethernet socket reconnect")
-                raise exceptions.DriplineHardwareResponselessError(err)
+            self._send_commands(commands)
         finally:
             self.alock.release()
-        to_return = ';'.join(data)
-        logger.debug("should return:\n{}".format(to_return))
-        return to_return
+        return 
 
 
     def _send_commands(self, commands):
@@ -109,26 +100,12 @@ class SerialProvider(Provider):
         all_data=[]
 
         for command in commands:
-            command += self.command_terminator
             logger.debug("sending: {}".format(repr(command)))
             #self.socket.send(command.encode())
-            # Chelsea added this line
-            self.serial.write(command+'\r\n')
-            if command == self.command_terminator:
-                blank_command = True
-            else:
-                blank_command = False
-
-            data = self._listen(blank_command)
-
-            if self.reply_echo_cmd:
-                if data.startswith(command):
-                    data = data[len(command):]
-                elif not blank_command:
-                    raise exceptions.DriplineHardwareResponselessError("Bad ethernet query return: {}".format(data))
-            logger.info("sync: {} -> {}".format(repr(command),repr(data)))
-            all_data.append(data)
-        return all_data
+            # Chelsea added the next two lines
+            the_command=command+'\r\n'
+            self.serial.write(the_command.encode())
+        return 
 
 
     def _listen(self, blank_command=False):
