@@ -31,7 +31,7 @@ __all__.append('SerialProvider')
 @fancy_doc
 class SerialProvider(Provider):
     def __init__(self,
-                 port='/dev/ttyUSB1',
+                 port='/dev/ttyUSB2',
                  baudrate=9600,
                  parity=serial.PARITY_NONE,
                  stopbits=serial.STOPBITS_ONE,
@@ -56,7 +56,7 @@ class SerialProvider(Provider):
 
         self.alock = threading.Lock()
         self.serial = serial.Serial(
-        port='/dev/ttyUSB1',
+        port='/dev/ttyUSB2',
         baudrate=9600,
         parity=serial.PARITY_NONE,
         stopbits=serial.STOPBITS_ONE,
