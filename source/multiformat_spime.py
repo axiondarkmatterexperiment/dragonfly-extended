@@ -1,4 +1,3 @@
-# THIS IS SO FUN THANKS WEED WACKER MAN
 import math
 import yaml
 import numpy as np
