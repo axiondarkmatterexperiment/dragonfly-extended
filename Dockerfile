@@ -5,7 +5,7 @@ ARG img_repo=dragonfly
 ARG img_tag=v1.19.4
 
 from ${img_user}/${img_repo}:${img_tag}
-RUN pip3 install --upgrade pip3
+RUN pip3 install --upgrade pip
 RUN pip3 install PyModbusTCP
 RUN pip3 install scipy
 RUN apt-get update && apt-get install -y python3-scipy
