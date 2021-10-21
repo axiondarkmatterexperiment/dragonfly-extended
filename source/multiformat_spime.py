@@ -448,16 +448,21 @@ def sidecar_fit_reflection(iq_data, frequencies):
 
     po_guess = sc_guess_fit_params(frequencies, Gamma_mag_sq, "reflection")
 
-    pow_fit_param, pow_fit_cov = curve_fit(func_sc_pow_reflected, frequencies,
-                                           Gamma_mag_sq, p0=po_guess,
-                                           sigma=sig_Gamma_mag_sq)
-
+    try:
+        pow_fit_param, pow_fit_cov = curve_fit(func_sc_pow_reflected, frequencies,
+                                               Gamma_mag_sq, p0=po_guess,
+                                               sigma=sig_Gamma_mag_sq)
+    except:
+        raise ValueError("Fit Fail!!")
+    
     fo_fit, Q_fit, del_y_fit, C_fit = pow_fit_param
 
     red_chisq = calc_red_chisq(frequencies, Gamma_mag_sq, sig_Gamma_mag_sq,
                                func_sc_pow_reflected, pow_fit_param)
-
-    # Gam_c is reflection coeffient Gamma of the cavity
+    
+    
+    
+        # Gam_c is reflection coeffient Gamma of the cavity
     Gam_c_mag, Gam_c_phase = sc_reflection_deconvolve_line(frequencies, Gamma_mag, 
                                                            Gamma_phase, C_fit)
     # Calculates magnitude of Gamma_cavity by plugging resonant frequency into
