@@ -618,6 +618,39 @@ def reflection_calibration(data_object):
 _all_calibrations.append(reflection_calibration)
 
 
+# def sidecar_reflection_calibration(data_object):
+#     """takes a network analyzer output of format 
+#             {
+#         start_frequency: <number>
+#         stop_frequency: <number>
+#         iq_data: <array of numbers, packed i,r,i,r>
+#             }
+#         and augments it with a reflection fit
+#           {
+#         fit_f0: <number>
+#         fit_Q: <number>
+#         fit_norm: <number>
+#         fit_noise: <number>
+#         fit_chisq: <number>
+#           }
+#     """
+#     freqs = np.linspace(data_object["start_frequency"],
+#                         data_object["stop_frequency"],
+#                         int(len(data_object["iq_data"])/2))
+
+#     fit_output = sidecar_fit_reflection(data_object["iq_data"], freqs)
+#     data_object["fit_norm"] = fit_output[0]
+#     data_object["fit_phase"] = fit_output[1]
+#     data_object["fit_f0"] = fit_output[2]
+#     data_object["fit_Q"] = fit_output[3]
+#     data_object["fit_beta"] = fit_output[4]
+#     data_object["fit_delay_time"] = fit_output[5]
+#     data_object["fit_chisq"] = fit_output[6]
+#     data_object["fit_shape"] = fit_output[7]
+#     data_object["dip_depth"] = fit_output[8]
+#     return data_object
+# _all_calibrations.append(sidecar_reflection_calibration)
+    
 def sidecar_reflection_calibration(data_object):
     """takes a network analyzer output of format 
             {
@@ -625,7 +658,7 @@ def sidecar_reflection_calibration(data_object):
         stop_frequency: <number>
         iq_data: <array of numbers, packed i,r,i,r>
             }
-        and augments it with a reflection fit
+        and augments it with a transmission fit
           {
         fit_f0: <number>
         fit_Q: <number>
@@ -634,22 +667,19 @@ def sidecar_reflection_calibration(data_object):
         fit_chisq: <number>
           }
     """
-    freqs = np.linspace(data_object["start_frequency"],
-                        data_object["stop_frequency"],
-                        int(len(data_object["iq_data"])/2))
-
-    fit_output = sidecar_fit_reflection(data_object["iq_data"], freqs)
-    data_object["fit_norm"] = fit_output[0]
-    data_object["fit_phase"] = fit_output[1]
-    data_object["fit_f0"] = fit_output[2]
-    data_object["fit_Q"] = fit_output[3]
-    data_object["fit_beta"] = fit_output[4]
-    data_object["fit_delay_time"] = fit_output[5]
-    data_object["fit_chisq"] = fit_output[6]
-    data_object["fit_shape"] = fit_output[7]
-    data_object["dip_depth"] = fit_output[8]
+    freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
+    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=fit_reflection(data_object["iq_data"],freqs)
+    data_object["fit_norm"]=fit_norm
+    data_object["fit_phase"]=fit_phase
+    data_object["fit_f0"]=fit_f0
+    data_object["fit_Q"]=fit_Q
+    data_object["fit_beta"]=fit_beta
+    data_object["fit_delay_time"]=fit_delay_time
+    data_object["fit_chisq"]=fit_chisq
+    data_object["fit_shape"]=fit_shape
+    data_object["dip_depth"]=dip_depth
     return data_object
-_all_calibrations.append(sidecar_reflection_calibration)
+_all_calibrations.append(reflection_calibration)
 
 
 
