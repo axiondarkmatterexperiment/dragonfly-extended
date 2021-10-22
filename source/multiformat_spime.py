@@ -137,6 +137,7 @@ def sc_guess_fit_params(f, power, measurement_type):
 
 def func_sc_pow_reflected(f, fo, Q, del_y, C):
     """The reflected power. Just a Lorentzian"""
+    if del_y>C: return 0 ## Temp fix
     return -(fo/(2*Q))**2*del_y/((f-fo)**2+(fo/(2*Q))**2)+C
 
 def func_sc_pow_transmitted(f, fo, Q, del_y, C):
@@ -433,11 +434,11 @@ def sidecar_fit_reflection(iq_data, frequencies):
     Gamma is the measured reflection coefficient"""
     # TODO Estimate uncertainty appropriately
 
-    # TODO change powers to an existing variable
-    if 2*len(frequencies)!=len(iq_data):
-        raise ValueError("point count not right nfreqs {} npows {}".format(len(frequencies), len(powers)))
-    if len(frequencies) < 16:
-        raise ValueError("not enough points to fit transmission, need 16, got {}".format(len(powers)))
+    # # TODO change powers to an existing variable
+    # if 2*len(frequencies)!=len(iq_data):
+    #     raise ValueError("point count not right nfreqs {} npows {}".format(len(frequencies), len(powers)))
+    # if len(frequencies) < 16:
+    #     raise ValueError("not enough points to fit transmission, need 16, got {}".format(len(powers)))
 
     Gamma_r, Gamma_i = unpack_iq_data(iq_data)
     Gamma_complex = Gamma_r+Gamma_i*1j
@@ -448,12 +449,9 @@ def sidecar_fit_reflection(iq_data, frequencies):
 
     po_guess = sc_guess_fit_params(frequencies, Gamma_mag_sq, "reflection")
 
-    try:
-        pow_fit_param, pow_fit_cov = curve_fit(func_sc_pow_reflected, frequencies,
-                                               Gamma_mag_sq, p0=po_guess,
-                                               sigma=sig_Gamma_mag_sq)
-    except:
-        raise ValueError("Fit Fail!!")
+    pow_fit_param, pow_fit_cov = curve_fit(func_sc_pow_reflected, frequencies,
+                                           Gamma_mag_sq, p0=po_guess,
+                                           sigma=sig_Gamma_mag_sq)
     
     fo_fit, Q_fit, del_y_fit, C_fit = pow_fit_param
 
@@ -623,39 +621,6 @@ def reflection_calibration(data_object):
 _all_calibrations.append(reflection_calibration)
 
 
-# def sidecar_reflection_calibration(data_object):
-#     """takes a network analyzer output of format 
-#             {
-#         start_frequency: <number>
-#         stop_frequency: <number>
-#         iq_data: <array of numbers, packed i,r,i,r>
-#             }
-#         and augments it with a reflection fit
-#           {
-#         fit_f0: <number>
-#         fit_Q: <number>
-#         fit_norm: <number>
-#         fit_noise: <number>
-#         fit_chisq: <number>
-#           }
-#     """
-#     freqs = np.linspace(data_object["start_frequency"],
-#                         data_object["stop_frequency"],
-#                         int(len(data_object["iq_data"])/2))
-
-#     fit_output = sidecar_fit_reflection(data_object["iq_data"], freqs)
-#     data_object["fit_norm"] = fit_output[0]
-#     data_object["fit_phase"] = fit_output[1]
-#     data_object["fit_f0"] = fit_output[2]
-#     data_object["fit_Q"] = fit_output[3]
-#     data_object["fit_beta"] = fit_output[4]
-#     data_object["fit_delay_time"] = fit_output[5]
-#     data_object["fit_chisq"] = fit_output[6]
-#     data_object["fit_shape"] = fit_output[7]
-#     data_object["dip_depth"] = fit_output[8]
-#     return data_object
-# _all_calibrations.append(sidecar_reflection_calibration)
-    
 def sidecar_reflection_calibration(data_object):
     """takes a network analyzer output of format 
             {
@@ -663,7 +628,7 @@ def sidecar_reflection_calibration(data_object):
         stop_frequency: <number>
         iq_data: <array of numbers, packed i,r,i,r>
             }
-        and augments it with a transmission fit
+        and augments it with a reflection fit
           {
         fit_f0: <number>
         fit_Q: <number>
@@ -672,20 +637,23 @@ def sidecar_reflection_calibration(data_object):
         fit_chisq: <number>
           }
     """
-    freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
-    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=fit_reflection(data_object["iq_data"],freqs)
-    data_object["fit_norm"]=fit_norm
-    data_object["fit_phase"]=fit_phase
-    data_object["fit_f0"]=fit_f0
-    data_object["fit_Q"]=fit_Q
-    data_object["fit_beta"]=fit_beta
-    data_object["fit_delay_time"]=fit_delay_time
-    data_object["fit_chisq"]=fit_chisq
-    data_object["fit_shape"]=fit_shape
-    data_object["dip_depth"]=dip_depth
-    return data_object
-_all_calibrations.append(reflection_calibration)
+    freqs = np.linspace(data_object["start_frequency"],
+                        data_object["stop_frequency"],
+                        int(len(data_object["iq_data"])/2))
 
+    fit_output = sidecar_fit_reflection(data_object["iq_data"], freqs)
+    data_object["fit_norm"] = fit_output[0]
+    data_object["fit_phase"] = fit_output[1]
+    data_object["fit_f0"] = fit_output[2]
+    data_object["fit_Q"] = fit_output[3]
+    data_object["fit_beta"] = fit_output[4]
+    data_object["fit_delay_time"] = fit_output[5]
+    data_object["fit_chisq"] = fit_output[6]
+    data_object["fit_shape"] = fit_output[7]
+    data_object["dip_depth"] = fit_output[8]
+    return data_object
+_all_calibrations.append(sidecar_reflection_calibration)
+    
 
 
 def find_peaks(vec,fraction,start,stop):
