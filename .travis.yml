@@ -31,14 +31,14 @@ jobs:
         - set -e
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         - .travis/bootstrap_image.sh -u project8 -r dragonfly -t v1.19.4-amd64 -a amd64 -i admx/dragonfly-extended:`echo ${TRAVIS_BRANCH} | tr / _`
-    ## arm32v7
-    - stage: build images
-      name: arm32v7
-      before_install: .travis/setup_emulation.sh
-      script:
-        - set -e
-        - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-        - .travis/bootstrap_image.sh -u project8 -r dragonfly -t v1.19.4-arm -a arm7 -i admx/dragonfly-extended:`echo ${TRAVIS_BRANCH} | tr / _`
+    ## ## arm32v7
+    ## - stage: build images
+    ##   name: arm32v7
+    ##   before_install: .travis/setup_emulation.sh
+    ##   script:
+    ##     - set -e
+    ##     - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    ##     - .travis/bootstrap_image.sh -u project8 -r dragonfly -t v1.19.4-arm -a arm7 -i admx/dragonfly-extended:`echo ${TRAVIS_BRANCH} | tr / _`
     ## arm64v8
     - stage: build images
       name: arm64v8
