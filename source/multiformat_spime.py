@@ -429,6 +429,13 @@ def sidecar_fit_transmission(powers, frequencies):
     return [del_y_fit, fo_fit, Q_fit, C_fit, red_chisq, fit_shape]
 
 
+def search_sign(f0,frequencies,phases):
+    idx=np.argmin(abs(frequencies-f0))
+    if sum(phases[idx:idx+5]) < sum(phases[idx-5:idx]):
+        return 1
+    else:
+        return -1
+    
 def sidecar_fit_reflection(iq_data, frequencies):
     """fits sidecar reflection data. For now, it is separate function from 
     the main experiment so as not to disturb it.
@@ -446,8 +453,7 @@ def sidecar_fit_reflection(iq_data, frequencies):
     Gamma_mag_sq = Gamma_r**2 + Gamma_i**2
     sig_Gamma_mag_sq = sc_estimate_power_uncertainty(Gamma_mag_sq)
     Gamma_mag = np.sqrt(Gamma_mag_sq)
-    # Gamma_phase = np.unwrap(np.angle(Gamma_complex))
-    Gamma_phase = np.angle(Gamma_complex)
+    Gamma_phase = np.unwrap(np.angle(Gamma_complex))
 
     po_guess = sc_guess_fit_params(frequencies, Gamma_mag_sq, "reflection")
 
@@ -469,13 +475,15 @@ def sidecar_fit_reflection(iq_data, frequencies):
     # fitted function
     Gam_c_mag_fo = np.sqrt(func_sc_pow_reflected(fo_fit, *pow_fit_param)*1/C_fit)
     
-    Gam_c_interp_phase = interp1d(frequencies, Gam_c_phase, kind='cubic')
+    # Gam_c_interp_phase = interp1d(frequencies, Gam_c_phase, kind='cubic')
 
-    # calculate phase of Gamma_cavity at resonant frequency by interpolating
-    # data.
-    Gam_c_phase_fo = Gam_c_interp_phase(fo_fit)
+    # # calculate phase of Gamma_cavity at resonant frequency by interpolating
+    # # data.
+    # Gam_c_phase_fo = Gam_c_interp_phase(fo_fit)
+
+    sign_phase = search_sign(fo_fit,frequencies,Gam_c_phase)
     
-    beta = sc_calculate_coupling(Gam_c_mag_fo, Gam_c_phase_fo)
+    beta = sc_calculate_coupling(Gam_c_mag_fo, sign_phase)#Gam_c_phase_fo)
     
     # I don't get a delay time through this analysis. Just setting to -1 so I 
     # can match Gray's database.
