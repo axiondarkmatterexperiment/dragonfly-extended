@@ -446,7 +446,8 @@ def sidecar_fit_reflection(iq_data, frequencies):
     Gamma_mag_sq = Gamma_r**2 + Gamma_i**2
     sig_Gamma_mag_sq = sc_estimate_power_uncertainty(Gamma_mag_sq)
     Gamma_mag = np.sqrt(Gamma_mag_sq)
-    Gamma_phase = np.unwrap(np.angle(Gamma_complex))
+    # Gamma_phase = np.unwrap(np.angle(Gamma_complex))
+    Gamma_phase = np.angle(Gamma_complex)
 
     po_guess = sc_guess_fit_params(frequencies, Gamma_mag_sq, "reflection")
 
