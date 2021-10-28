@@ -475,11 +475,11 @@ def sidecar_fit_reflection(iq_data, frequencies):
     # fitted function
     Gam_c_mag_fo = np.sqrt(func_sc_pow_reflected(fo_fit, *pow_fit_param)*1/C_fit)
     
-    # Gam_c_interp_phase = interp1d(frequencies, Gam_c_phase, kind='cubic')
+    Gam_c_interp_phase = interp1d(frequencies, Gam_c_phase, kind='cubic')
 
-    # # calculate phase of Gamma_cavity at resonant frequency by interpolating
-    # # data.
-    # Gam_c_phase_fo = Gam_c_interp_phase(fo_fit)
+    # calculate phase of Gamma_cavity at resonant frequency by interpolating
+    # data.
+    Gam_c_phase_fo = Gam_c_interp_phase(fo_fit)
 
     sign_phase = search_sign(fo_fit,frequencies,Gam_c_phase)
     
