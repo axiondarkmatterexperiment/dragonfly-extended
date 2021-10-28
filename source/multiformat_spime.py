@@ -167,7 +167,8 @@ def sc_reflection_deconvolve_line(f, Gamma_mag, Gamma_phase, C_fit):
 
 def sc_calculate_coupling(mag_fo, phase_fo):
     """Calculate coupling to a cavity after reflection fit is done"""
-    sgn = np.sign(phase_fo - np.pi)
+    # sgn = np.sign(phase_fo - np.pi) 
+    sgn = np.sign(phase_fo)
     beta = (1+sgn*mag_fo)/(1-sgn*mag_fo)
     return beta
 
