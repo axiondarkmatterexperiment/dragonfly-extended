@@ -492,13 +492,15 @@ def sidecar_fit_reflection(iq_data, frequencies):
     fit_shape = sc_reflection_fit_shape_database_hack(frequencies, func_sc_pow_reflected,
                                         pow_fit_param)
 
+    dip_depth = np.sqrt(del_y_fit)
+    
     logger.info("norm {}".format(C_fit))
     logger.info("phase {}".format(Gam_c_phase_fo))
     logger.info("f0 fit {}".format(fo_fit))
     logger.info("Q fit {}".format(Q_fit))
     logger.info("beta fit {}".format(beta))
     logger.info("reduced chi-square {}".format(red_chisq))
-    logger.info("dip depth {}".format(del_y_fit))
+    logger.info("dip depth {}".format(dip_depth))
 
     # turn numpy arrays to lists so that json can iterate through it.
     # apparently, json can't deal with numpy objects, even if they are just a
@@ -507,7 +509,7 @@ def sidecar_fit_reflection(iq_data, frequencies):
     fit_shape = fit_shape.tolist()
 
     return [C_fit, Gam_c_phase_fo_from_interp, fo_fit, Q_fit, beta,
-            delay_time, red_chisq, fit_shape, del_y_fit]
+            delay_time, red_chisq, fit_shape, dip_depth]
 
 
 def semicolon_array_to_json_object(data_string,label_array):
