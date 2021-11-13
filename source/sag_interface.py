@@ -35,6 +35,8 @@ class SAGCoordinator(dripline.core.Endpoint):
 
         self.msg = ""
         self.waveform_name = ""
+        self.tscaled = []
+        self.tseries = []
         self.spectrum = []
         self.re_tseries = []
         self.scale = []
@@ -133,7 +135,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         # to extra sets calculated from input parameters
         self._do_set_collection(self.sag_injection_sets, parameters)
 
-    def make_waveform(self):
+    def _make_waveform(self):
     
         def get_du(self):
 
@@ -233,11 +235,11 @@ class SAGCoordinator(dripline.core.Endpoint):
             '''
             This function reads out the tscaled spectrum and returns all values of tscaled as a string
             '''
-            tseries=FourierTrans(SAG_Spec(self.n ,self.r, self.du))
-            tscaled=reScale(tseries)
+            self.tseries=FourierTrans(SAG_Spec(self.n ,self.r, self.du))
+            self.tscaled=reScale(self.tseries)
             self.msg="DATA:DAC VOLATILE, "
             
-            N=np.size(tseries)
+            N=np.size(self.tseries)
             
             for i in range(0, N):
                 msg+=str(int(tscaled[i]))
@@ -282,6 +284,8 @@ class SAGCoordinator(dripline.core.Endpoint):
         SAG.writeAG()
 
         print(f'\n--- Waveform of Type {self.line_shape} at Center Frequency {self.f_rest} Hz Saved as {self.waveform_name}---\n', flush=True)
+
+        self.provider.set(sag_arb_save_waveform,self.tscaled) #this will send this data string to endpoint
 
         
             
