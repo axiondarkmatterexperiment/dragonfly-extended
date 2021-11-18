@@ -4,6 +4,10 @@ import six
 import dripline
 #import dragonfly
 
+import scipy
+import numpy as np
+import math
+
 import logging
 logger = logging.getLogger('dragonfly.custom.sag_interface')
 
@@ -12,7 +16,7 @@ class SAGCoordinator(dripline.core.Endpoint):
     Coordinated interactions with all instruments within the broader sag system.
     Provides a single point of contact and uniform interface to the SAG.
     '''
-    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, f_stan=60, f_rest = 650000000, line_shape='maxwellian',**kwargs):
+    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, f_stan=60, f_rest=650000000, line_shape='maxwellian', **kwargs):
         '''
         enable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to be ready to start output of a signal
         disable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to not produce any output
@@ -20,7 +24,9 @@ class SAGCoordinator(dripline.core.Endpoint):
         switch_endpoint: (string) - name of the endpoint used for switching the signal path into the weak port
         extra_logs: (list) - list of endpoint names to cmd `scheduled_action` (to trigger a log) whenever the SAG is configured
         state_extra_logs: (dict) - dict with keys being valid switch_endpoint states (string) and values being a list of extra sensors to log when entering that state.
-
+        f_stan: (float) - value of the frequency seperation between, in Hz
+        f_rest: (float) - value of the axion rest mass frequency for time series generation, in Hz
+        line_shape: (string) - name of the axion line shape model to be used
         '''
         dripline.core.Endpoint.__init__(self, **kwargs)
 
@@ -33,6 +39,7 @@ class SAGCoordinator(dripline.core.Endpoint):
 
         self.evaluator = asteval.Interpreter()
 
+        # attributes for line shape generation into the waveform generator (33220A)
         self.msg = ""
         self.waveform_name = ""
         self.tscaled = []
@@ -44,7 +51,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.f_rest = f_rest
         self.line_shape = line_shape
         self.N = 65536
-        self.n = int(self.N -(self.f_stan*10)) #if uneven spacing, will return list
+        self.n = 65000
         self.h = scipy.constants.Planck #J/Hz
         self.h_eV = scipy.constants.physical_constants['Planck constant in eV s'][0] #eV/Hz
         self.eV = scipy.constants.physical_constants['joule-electron volt relationship'][0] #6.24e18
@@ -135,7 +142,9 @@ class SAGCoordinator(dripline.core.Endpoint):
         # to extra sets calculated from input parameters
         self._do_set_collection(self.sag_injection_sets, parameters)
 
-    def _make_waveform(self):
+    def make_waveform(self, **parameters):
+        self.f_rest = parameters['f_rest']
+        self.line_shape = parameters['shape_type']
     
         def get_du(self):
 
@@ -275,23 +284,23 @@ class SAGCoordinator(dripline.core.Endpoint):
             s.close()
             return
 
+        # execute the in-method functions to generate the time series (and load to the waveform generator?)
         SAG = SAG_Maker(f_stan=self.f_stan, f_rest=self.f_rest, line_shape=self.line_shape)
         SAG.get_du()
         SAG.SAG_Spec()
         SAG.FourierTrans()
         SAG.reScale()
-        SAG.writeWF()
+        timeSAG.writeWF()
         SAG.writeAG()
 
         print(f'\n--- Waveform of Type {self.line_shape} at Center Frequency {self.f_rest} Hz Saved as {self.waveform_name}---\n', flush=True)
 
         self.provider.set(sag_arb_save_waveform,self.tscaled) #this will send this data string to endpoint
-
-        
             
         
 
             
+
 
 
 
