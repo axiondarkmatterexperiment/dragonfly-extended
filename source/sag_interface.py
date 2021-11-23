@@ -222,8 +222,8 @@ class SAGCoordinator(dripline.core.Endpoint):
             maxVal=np.amax(self.re_tseries)
             minVal=np.amin(self.re_tseries)
             
-            #print(f'maxVal={maxVal}')
-            #print(f'minVal={minVal}')
+            #print('maxVal='+str(maxVal))
+            #print('minVal='+str(minVal))
             
             N=np.size(self.re_tseries)
             scale=np.zeros(N)
@@ -279,7 +279,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             s.send(msg3) #sends tscaled to the socket
             
             self.waveform_name = 'MY_AXION4'
-            msg=f"DATA:COPY {self.waveform_name}\n" #this saves the name of the line shape make modular on the line shape
+            msg="DATA:COPY "+str(self.waveform_name)+"\n" #this saves the name of the line shape make modular on the line shape
             s.send(msg) 
             s.close()
             return
@@ -293,7 +293,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         timeSAG.writeWF()
         SAG.writeAG()
 
-        #print(f'\n--- Waveform of Type {self.line_shape} at Center Frequency {self.f_rest} Hz Saved as {self.waveform_name}---\n', flush=True)
+        #print('\n--- Waveform of Type '+str(self.line_shape)+' at Center Frequency '+str(self.f_rest)+' Hz Saved as '+str(self.waveform_name)+'---\n', flush=True)
 
         self.provider.set(sag_arb_save_waveform,self.tscaled) #this will send this data string to endpoint
             
