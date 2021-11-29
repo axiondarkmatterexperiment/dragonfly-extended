@@ -5,6 +5,7 @@ import dripline
 #import dragonfly
 
 import scipy
+import scipy.constants as consts
 import numpy as np
 import math
 
@@ -52,10 +53,10 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.line_shape = line_shape
         self.N = 65536
         self.n = 65000
-        self.h = scipy.constants.Planck #J/Hz
-        self.h_eV = scipy.constants.physical_constants['Planck constant in eV s'][0] #eV/Hz
-        self.eV = scipy.constants.physical_constants['joule-electron volt relationship'][0] #6.24e18
-        self.c = (scipy.constants.c) *10**-3 #km/s
+        self.h = consts.Planck #J/Hz
+        self.h_eV = consts.physical_constants['Planck constant in eV s'][0] #eV/Hz
+        self.eV = consts.physical_constants['joule-electron volt relationship'][0] #6.24e18
+        self.c = (consts.c) *10**-3 #km/s
         self.v_bar = (230/0.85) #km/s
         self.r = 0.85
         self.alpha =  0.36 #+/- 0.13 from Lentz et al. 2017
