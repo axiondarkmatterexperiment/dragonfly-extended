@@ -148,7 +148,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.f_rest = parameters['f_rest']
         self.line_shape = parameters['shape_type']
     
-        def get_du(self):
+        def get_du():
 
             self.m_a = (self.h*self.f_rest)/(self.c**2) #J/c^2
             if self.line_shape == 'max_2017':
@@ -159,11 +159,11 @@ class SAGCoordinator(dripline.core.Endpoint):
             self.du = (self.h*self.f_stan)/((self.m_a*(self.v_bar**2))/2) 
 
         
-        def max_term(self,x,i):
+        def max_term(x,i):
             term = ((((i-self.n)*self.f_stan)*self.h_eV)/(self.rest_m*self.T))**x
             return term
 
-        def SAG_Spec(self):
+        def SAG_Spec():
             '''
             This function generates the distribution function in terms of the axion kinetic energy   measured in the experiment's laboratory (Turner 1990 [5b]).
 
@@ -175,7 +175,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             spec=np.zeros(self.N) 
             if self.line_shape == 'max_2017':
                 for i in range(self.n, self.N):
-                    spec[i] = self.max_term(self.alpha,i)*math.exp(-(self.max_term(self.beta,i)))
+                    spec[i] = max_term(self.alpha,i)*math.exp(-(max_term(self.beta,i)))
 
             else: 
                 for i in range(self.n, self.N):
@@ -185,7 +185,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             spec_norm = np.array(spec)/sum(spec)
             self.spectrum = list(spec_norm)
 
-        def FourierTrans(self):
+        def FourierTrans():
             N=np.size(self.spectrum) 
             tseries=np.fft.ifft(self.spectrum) #compute the one-dimensional inverse discrete Fourier Transform from frequency domain to time domain
             
@@ -198,7 +198,7 @@ class SAGCoordinator(dripline.core.Endpoint):
 
             self.re_tseries = re_tseries
 
-        def reScale(self):
+        def reScale():
             '''
             this function rescales the tseries amplitude to -8191:8191
             '''
@@ -217,7 +217,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             self.scale = scale
 
         
-        def writeWF(self):
+        def writeWF():
             '''
             This function reads out the tscaled spectrum and returns all values of tscaled as a string
             '''
@@ -263,12 +263,12 @@ class SAGCoordinator(dripline.core.Endpoint):
 
         # execute the in-method functions to generate the time series (and load to the waveform generator?)
         #SAG = SAG_Maker(f_stan=self.f_stan, f_rest=self.f_rest, line_shape=self.line_shape)
-        self.get_du()
-        self.SAG_Spec()
-        self.FourierTrans()
-        self.reScale()
-        self.writeWF()
-        self.writeAG()
+        get_du()
+        SAG_Spec()
+        FourierTrans()
+        reScale()
+        writeWF()
+        writeToAG()
 
         #print('\n--- Waveform of Type '+str(self.line_shape)+' at Center Frequency '+str(self.f_rest)+' Hz Saved as '+str(self.waveform_name)+'---\n', flush=True)
 
@@ -277,7 +277,6 @@ class SAGCoordinator(dripline.core.Endpoint):
         
 
             
-
 
 
 
