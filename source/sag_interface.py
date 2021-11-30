@@ -4,8 +4,9 @@ import six
 import dripline
 #import dragonfly
 
-import scipy
+#import scipy
 import scipy.constants as consts
+import socket as skt
 import numpy as np
 import math
 
@@ -152,7 +153,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             self.m_a = (self.h*self.f_rest)/(self.c**2) #J/c^2
             if self.line_shape == 'max_2017':
                 self.m_a = self.m_a * self.eV #eV/c^2
-                self.m_a = self.m_a * SAG.c**2
+                self.m_a = self.m_a * self.c**2
             else:
                 pass
             self.du = (self.h*self.f_stan)/((self.m_a*(self.v_bar**2))/2) 
@@ -168,7 +169,7 @@ class SAGCoordinator(dripline.core.Endpoint):
 
             u = (i-n)du where u dimensionless form of axion KE in lab frame
             r = ratio of the velocity of the Sun through the Galaxy to the rms halo velocity
-            max_2017 = maxwellian form from Letz et al. 2017
+            max_2017 = maxwellian form from Lentz et al. 2017
             maxwellian = maxwellian form from Turner et al. 2015
             '''
             spec=np.zeros(self.N) 
@@ -181,14 +182,8 @@ class SAGCoordinator(dripline.core.Endpoint):
                     spec[i]=np.sqrt(np.sqrt(3/(2*np.pi))/self.r*np.exp(-1.5*(self.r*self.r+(i-self.n)*self.du))*np.sinh(3*self.r*np.sqrt((i-self.n)*self.du)))
 
 
-            spec = preprocessing.normalize([spec],norm='l1')
-            sns.set(style='white')
-            plt.figure(figsize=(8,5))
-            plt.title('Distribution Function')
-            plt.xlabel('Frequency') #frequency steps
-            plt.ylabel('Amplitude')
-            plt.plot(spec[0])
-            self.spectrum = spec[0]
+            spec_norm = np.array(spec)/sum(spec)
+            self.spectrum = list(spec_norm)
 
         def FourierTrans(self):
             N=np.size(self.spectrum) 
@@ -196,24 +191,11 @@ class SAGCoordinator(dripline.core.Endpoint):
             
             tseries=tseries.real 
             
-            plt.figure(figsize=(8,5))
-            plt.title('Time Series Spectrum')
-            plt.xlabel('Time')
-            plt.ylabel('Amplitude')
-            plt.figure(2)    
-            plt.plot(tseries)
-            
             re_tseries=np.zeros(self.N) 
             
             for i in range(0,self.N):
                 re_tseries[i]=tseries[i-self.N//2] #rescaled
 
-            plt.figure(figsize=(8,5))
-            plt.title('Rescaled Time Series Spectrum')
-            plt.xlabel('Time')
-            plt.ylabel('Amplitude')
-            plt.figure(3)
-            plt.plot(re_tseries)
             self.re_tseries = re_tseries
 
         def reScale(self):
@@ -232,12 +214,6 @@ class SAGCoordinator(dripline.core.Endpoint):
             for i in range(0, N):
                 scale[i]=int(round((16382*(self.re_tseries[i]-minVal)/(maxVal-minVal))-8191))
             
-
-            plt.figure(figsize=(8,5))
-            plt.title('Rescaled v.2 Frequency Spectrum')
-            plt.xlabel('Frequency')
-            plt.ylabel('Amplitude')
-            plt.plot(scale)
             self.scale = scale
 
         
@@ -252,9 +228,9 @@ class SAGCoordinator(dripline.core.Endpoint):
             N=np.size(self.tseries)
             
             for i in range(0, N):
-                msg+=str(int(tscaled[i]))
+                self.msg+=str(int(self.tscaled[i]))
                 if i<N-1:
-                    msg+=", "
+                    self.msg+=", "
             
             self.msg+="\n"
 
@@ -286,22 +262,21 @@ class SAGCoordinator(dripline.core.Endpoint):
             return
 
         # execute the in-method functions to generate the time series (and load to the waveform generator?)
-        SAG = SAG_Maker(f_stan=self.f_stan, f_rest=self.f_rest, line_shape=self.line_shape)
-        SAG.get_du()
-        SAG.SAG_Spec()
-        SAG.FourierTrans()
-        SAG.reScale()
-        timeSAG.writeWF()
-        SAG.writeAG()
+        #SAG = SAG_Maker(f_stan=self.f_stan, f_rest=self.f_rest, line_shape=self.line_shape)
+        self.get_du()
+        self.SAG_Spec()
+        self.FourierTrans()
+        self.reScale()
+        self.writeWF()
+        self.writeAG()
 
         #print('\n--- Waveform of Type '+str(self.line_shape)+' at Center Frequency '+str(self.f_rest)+' Hz Saved as '+str(self.waveform_name)+'---\n', flush=True)
 
-        self.provider.set(sag_arb_save_waveform,self.tscaled) #this will send this data string to endpoint
+        self.provider.set('sag_arb_save_waveform',self.tscaled) #this will send this data string to endpoint
             
         
 
             
-
 
 
 
