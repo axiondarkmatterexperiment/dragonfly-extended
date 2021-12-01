@@ -160,7 +160,7 @@ class SAGCoordinator(dripline.core.Endpoint):
 
         
         def max_term(x,i):
-            term = ((((i-self.n)*self.f_stan)*self.h_eV)/(self.rest_m*self.T))**x
+            term = ((((i-self.n)*self.f_stan)*self.h_eV)/(self.m_a*self.T))**x
             return term
 
         def SAG_Spec():
@@ -170,7 +170,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             u = (i-n)du where u dimensionless form of axion KE in lab frame
             r = ratio of the velocity of the Sun through the Galaxy to the rms halo velocity
             max_2017 = maxwellian form from Lentz et al. 2017
-            maxwellian = maxwellian form from Turner et al. 2015
+            maxwellian = maxwellian form from Turner et al. 1990
             '''
             spec=np.zeros(self.N) 
             if self.line_shape == 'max_2017':
@@ -193,8 +193,8 @@ class SAGCoordinator(dripline.core.Endpoint):
             
             re_tseries=np.zeros(self.N) 
             
-            for i in range(0,self.N):
-                re_tseries[i]=tseries[i-self.N//2] #rescaled
+            for j in range(0,self.N):
+                re_tseries[j]=tseries[j-self.N//2] #rescaled
 
             self.re_tseries = re_tseries
 
@@ -215,20 +215,20 @@ class SAGCoordinator(dripline.core.Endpoint):
                 scale[i]=int(round((16382*(self.re_tseries[i]-minVal)/(maxVal-minVal))-8191))
             
             self.scale = scale
+            print(np.amax(self.scale))
+            print(np.amin(self.scale))
 
         
         def writeWF():
             '''
             This function reads out the tscaled spectrum and returns all values of tscaled as a string
             '''
-            self.tseries=FourierTrans(SAG_Spec(self.n ,self.r, self.du))
-            self.tscaled=reScale(self.tseries)
             self.msg="DATA:DAC VOLATILE, "
             
-            N=np.size(self.tseries)
+            N=np.size(self.scale)
             
             for i in range(0, N):
-                self.msg+=str(int(self.tscaled[i]))
+                self.msg+=str(int(self.scale[i]))
                 if i<N-1:
                     self.msg+=", "
             
@@ -277,6 +277,12 @@ class SAGCoordinator(dripline.core.Endpoint):
         
 
             
+
+
+
+
+
+
 
 
 
