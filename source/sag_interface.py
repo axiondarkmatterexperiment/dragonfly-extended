@@ -215,8 +215,6 @@ class SAGCoordinator(dripline.core.Endpoint):
                 scale[i]=int(round((16382*(self.re_tseries[i]-minVal)/(maxVal-minVal))-8191))
             
             self.scale = scale
-            print(np.amax(self.scale))
-            print(np.amin(self.scale))
 
         
         def writeWF():
@@ -247,7 +245,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             s=skt.socket(skt.AF_INET, skt.SOCK_STREAM) #creating a new socket
             s.connect((TCP_IP, TCP_PORT)) #connect to a remote socket at address
 
-            msg3=writeWF()
+            msg3=self.msg
             
             msg2="FREQ 50 \n" #set frequency [Hz]
             s.send(msg2.encode()) # messag needs to be encoded as a byte string
@@ -276,6 +274,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         
 
             
+
 
 
 
