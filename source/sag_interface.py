@@ -250,14 +250,16 @@ class SAGCoordinator(dripline.core.Endpoint):
             msg3=writeWF()
             
             msg2="FREQ 50 \n" #set frequency [Hz]
-            s.send(msg2) 
-            
+            #s.send(msg2) 
+            s.send(msg2.encode(),(TCP_IP, TCP_PORT))
 
-            s.send(msg3) #sends tscaled to the socket
+            #s.send(msg3) #sends tscaled to the socket
+            s.send(msg3.encode(),(TCP_IP, TCP_PORT))
             
             self.waveform_name = 'MY_AXION4'
             msg="DATA:COPY "+str(self.waveform_name)+"\n" #this saves the name of the line shape make modular on the line shape
-            s.send(msg) 
+            #s.send(msg) 
+            s.send(msg.encode(),(TCP_IP, TCP_PORT))
             s.close()
             return
 
@@ -276,7 +278,6 @@ class SAGCoordinator(dripline.core.Endpoint):
             
         
 
-            
 
 
 
