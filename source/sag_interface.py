@@ -145,8 +145,8 @@ class SAGCoordinator(dripline.core.Endpoint):
         self._do_set_collection(self.sag_injection_sets, parameters)
 
     def make_waveform(self, **parameters):
-        self.f_rest = parameters['f_rest']
-        self.line_shape = parameters['shape_type']
+        self.f_rest = float(parameters['f_rest'])
+        self.line_shape = str(parameters['shape_type'])
     
         def get_du():
 
@@ -274,14 +274,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             
         
 
-       
-
-
-
-
-
-
-
+            
 
 
 
