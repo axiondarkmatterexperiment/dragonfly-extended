@@ -144,7 +144,8 @@ class SAGCoordinator(dripline.core.Endpoint):
         # to extra sets calculated from input parameters
         self._do_set_collection(self.sag_injection_sets, parameters)
 
-    def make_waveform(self, **parameters):
+    def update_waveform(self, **parameters):
+        logger.info('in update waveform')
         self.f_rest = float(parameters['f_rest'])
         self.line_shape = str(parameters['shape_type'])
     
@@ -258,6 +259,19 @@ class SAGCoordinator(dripline.core.Endpoint):
             print("messages passed to arb")
             s.close()
             return
+        
+        def sendToAG():
+            '''
+            Iterates over messages to send to waveform generator to update line shape 
+
+            '''
+            # send new waveform message
+            self.provider.set('sag_arb_save_waveform',self.scale)
+            # # collect sets and values and send them through _do_set_collection
+            # sets = ['make_new_waveform','sag_arb_freq','sag_arb_save_waveform']
+            # values = ['',' 50 \n',self.msg]
+            # self._do_set_collection(sets, values)
+            return None
 
         # execute the in-method functions to generate the time series (and load to the waveform generator?)
         #SAG = SAG_Maker(f_stan=self.f_stan, f_rest=self.f_rest, line_shape=self.line_shape)
@@ -266,14 +280,14 @@ class SAGCoordinator(dripline.core.Endpoint):
         FourierTrans()
         reScale()
         writeWF()
-        writeToAG()
+        sendToAG()
+        # writeToAG()
 
         #print('\n--- Waveform of Type '+str(self.line_shape)+' at Center Frequency '+str(self.f_rest)+' Hz Saved as '+str(self.waveform_name)+'---\n', flush=True)
 
-        self.provider.set('sag_arb_save_waveform',self.tscaled) #this will send this data string to endpoint
+        # self.provider.set('sag_arb_save_waveform',self.tscaled) #this will send this data string to endpoint
             
         
-
             
 
 
