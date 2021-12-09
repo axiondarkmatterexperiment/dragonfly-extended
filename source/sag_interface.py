@@ -272,8 +272,8 @@ class SAGCoordinator(dripline.core.Endpoint):
             logger.info('in send to AG')
             # self.provider.set('sag_arb_save_waveform',list(self.scale))
             # collect sets and values and send them through _do_set_collection
-            sets = {'sag_arb_save_waveform'}
-            values = {'sag_arb_save_waveform':self.WFstr}
+            sets = [{'sag_arb_save_waveform':self.WFstr}] #sets containg both the endpiont name and the values, in a list structure
+            values = {}
             self._do_set_collection(sets, values)
             logger.info('set complete')
             
