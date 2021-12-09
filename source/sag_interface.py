@@ -266,7 +266,9 @@ class SAGCoordinator(dripline.core.Endpoint):
 
             '''
             # send new waveform message
+            logger.info('in send to AG')
             self.provider.set('sag_arb_save_waveform',list(self.scale))
+            logger.info('set complete')
             # # collect sets and values and send them through _do_set_collection
             # sets = ['make_new_waveform','sag_arb_freq','sag_arb_save_waveform']
             # values = ['',' 50 \n',self.msg]
