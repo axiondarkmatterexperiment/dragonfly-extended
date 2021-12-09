@@ -223,15 +223,18 @@ class SAGCoordinator(dripline.core.Endpoint):
             This function reads out the tscaled spectrum and returns all values of tscaled as a string
             '''
             self.msg="DATA:DAC VOLATILE, "
+            self.WFstr = ""
             
             N=np.size(self.scale)
             
             for i in range(0, N):
-                self.msg+=str(int(self.scale[i]))
+                self.WFstr+=str(int(self.scale[i]))
                 if i<N-1:
-                    self.msg+=", "
+                    self.WFstr+=", "
             
+            self.msg+=self.WFstr 
             self.msg+="\n"
+            
 
         def writeToAG():
             '''
@@ -270,7 +273,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             # self.provider.set('sag_arb_save_waveform',list(self.scale))
             # collect sets and values and send them through _do_set_collection
             sets = {'sag_arb_save_waveform'}
-            values = {'sag_arb_save_waveform':list(self.scale)}
+            values = {'sag_arb_save_waveform':self.WFstr}
             self._do_set_collection(sets, values)
             logger.info('set complete')
             
