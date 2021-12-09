@@ -266,7 +266,7 @@ class SAGCoordinator(dripline.core.Endpoint):
 
             '''
             # send new waveform message
-            self.provider.set('sag_arb_save_waveform',self.scale)
+            self.provider.set('sag_arb_save_waveform',list(self.scale))
             # # collect sets and values and send them through _do_set_collection
             # sets = ['make_new_waveform','sag_arb_freq','sag_arb_save_waveform']
             # values = ['',' 50 \n',self.msg]
@@ -288,7 +288,10 @@ class SAGCoordinator(dripline.core.Endpoint):
         # self.provider.set('sag_arb_save_waveform',self.tscaled) #this will send this data string to endpoint
             
         
+
             
+
+
 
 
 
