@@ -267,12 +267,13 @@ class SAGCoordinator(dripline.core.Endpoint):
             '''
             # send new waveform message
             logger.info('in send to AG')
-            self.provider.set('sag_arb_save_waveform',list(self.scale))
+            # self.provider.set('sag_arb_save_waveform',list(self.scale))
+            # collect sets and values and send them through _do_set_collection
+            sets = {'sag_arb_save_waveform'}
+            values = {list(self.scale)}
+            self._do_set_collection(sets, values)
             logger.info('set complete')
-            # # collect sets and values and send them through _do_set_collection
-            # sets = ['make_new_waveform','sag_arb_freq','sag_arb_save_waveform']
-            # values = ['',' 50 \n',self.msg]
-            # self._do_set_collection(sets, values)
+            
             return None
 
         # execute the in-method functions to generate the time series (and load to the waveform generator?)
