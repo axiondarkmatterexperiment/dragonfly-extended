@@ -270,7 +270,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             # self.provider.set('sag_arb_save_waveform',list(self.scale))
             # collect sets and values and send them through _do_set_collection
             sets = {'sag_arb_save_waveform'}
-            values = {list(self.scale)}
+            values = {'sag_arb_save_waveform':list(self.scale)}
             self._do_set_collection(sets, values)
             logger.info('set complete')
             
