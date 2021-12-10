@@ -271,7 +271,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             logger.info('in send to AG')
             # concatenate new waveform message and copy message
             self.waveform_name = 'MY_AXION4'
-            msg="DATA:COPY "+str(self.waveform_name)+" \n"
+            copymsg="DATA:COPY "+str(self.waveform_name)+" \n"
             msg = self.msg + " " + copymsg
             # self.provider.set('sag_arb_save_waveform',list(self.scale))
             # collect sets and values and send them through _do_set_collection
