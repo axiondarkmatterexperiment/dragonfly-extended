@@ -268,11 +268,14 @@ class SAGCoordinator(dripline.core.Endpoint):
             Iterates over messages to send to waveform generator to update line shape 
 
             '''
-            # send new waveform message
             logger.info('in send to AG')
+            # concatenate new waveform message and copy message
+            self.waveform_name = 'MY_AXION4'
+            msg="DATA:COPY "+str(self.waveform_name)+" \n"
+            msg = self.msg + " " + copymsg
             # self.provider.set('sag_arb_save_waveform',list(self.scale))
             # collect sets and values and send them through _do_set_collection
-            sets = [{'sag_arb_save_waveform':self.WFstr}] #sets containg both the endpiont name and the values, in a list structure
+            sets = [{'sag_arb_save_waveform': msg}] #sets containg both the endpiont name and the values, in a list structure
             values = {}
             self._do_set_collection(sets, values)
             logger.info('set complete')
