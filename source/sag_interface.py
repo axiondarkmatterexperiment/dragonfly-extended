@@ -18,7 +18,7 @@ class SAGCoordinator(dripline.core.Endpoint):
     Coordinated interactions with all instruments within the broader sag system.
     Provides a single point of contact and uniform interface to the SAG.
     '''
-    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, f_stan=60, f_rest=650000000, line_shape='maxwellian', **kwargs):
+    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, update_waveform_sets=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, f_stan=60, f_rest=650000000, line_shape='maxwellian', **kwargs):
         '''
         enable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to be ready to start output of a signal
         disable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to not produce any output
@@ -35,6 +35,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.enable_output_sets = enable_output_sets
         self.disable_output_sets = disable_output_sets
         self.sag_injection_sets = sag_injection_sets
+        self.update_waveform_sets = update_waveform_sets
         self.switch_endpoint = switch_endpoint
         self.extra_logs = extra_logs
         self.state_extra_logs = state_extra_logs
@@ -266,20 +267,11 @@ class SAGCoordinator(dripline.core.Endpoint):
         def sendToAG():
             '''
             Iterates over messages to send to waveform generator to update line shape 
-
             '''
             logger.info('in send to AG')
-            # concatenate new waveform message and copy message
-            self.waveform_name = 'MY_AXION4'
-            copymsg="DATA:COPY "+str(self.waveform_name)+" \n"
-            msg = self.msg + " " + copymsg
-            # self.provider.set('sag_arb_save_waveform',list(self.scale))
-            # collect sets and values and send them through _do_set_collection
-            sets = [{'sag_arb_save_waveform': msg}] #sets containg both the endpiont name and the values, in a list structure
-            values = {}
-            self._do_set_collection(sets, values)
+            values = {'sag_waveform_array': self.WFstr}
+            self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
-            
             return None
 
         # execute the in-method functions to generate the time series (and load to the waveform generator?)
