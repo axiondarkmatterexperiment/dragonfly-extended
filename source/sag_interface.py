@@ -236,7 +236,12 @@ class SAGCoordinator(dripline.core.Endpoint):
             
             self.msg+=self.WFstr 
             self.msg+="\n"
-            
+            # also partitioning the waveform string into four parts
+            N = len(self.WFstr)//4
+            self.WFstr1 = self.WFstr[0:N] 
+            self.WFstr2 = self.WFstr[N:2*N]
+            self.WFstr3 = self.WFstr[2*N:3*N] 
+            self.WFstr4 = self.WFstr[3*N:] 
 
         def writeToAG():
             '''
@@ -270,10 +275,16 @@ class SAGCoordinator(dripline.core.Endpoint):
             Iterates over messages to send to waveform generator to update line shape 
             '''
             logger.info('in send to AG')
-            values = {'sag_waveform_array': self.WFstr}
-            logger.info('sending waveform array: '+self.WFstr)
+            #values = {'sag_waveform_array': self.WFstr}
+            values = {'sag_waveform_array_1': self.WFstr1, 
+                      'sag_waveform_array_2': self.WFstr2,
+                      'sag_waveform_array_3': self.WFstr3,
+                      'sag_waveform_array_4': self.WFstr4}
+            logger.info('setting waveform array: '+self.WFstr)
             self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
+            logger.info('sending waveform')
+            self.provider.cmd(self.update_waveform_sets, 'sag_arb.send_waveform')
             return None
 
         # execute the in-method functions to generate the time series (and load to the waveform generator?)
