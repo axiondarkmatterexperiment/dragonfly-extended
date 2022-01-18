@@ -236,12 +236,14 @@ class SAGCoordinator(dripline.core.Endpoint):
             
             self.msg+=self.WFstr 
             self.msg+="\n"
-            # also partitioning the waveform string into four parts
-            N = len(self.WFstr)//4
-            self.WFstr1 = self.WFstr[0:N] 
-            self.WFstr2 = self.WFstr[N:2*N]
-            self.WFstr3 = self.WFstr[2*N:3*N] 
-            self.WFstr4 = self.WFstr[3*N:] 
+            # also partitioning the waveform string into J parts
+            J = 9
+            K = len(self.WFstr)//(J-1)
+            self.WFstrsegs = [self.WFstr[i*K:(i+1)*K] for i in range(0,J)]
+            #self.WFstr1 = self.WFstr[0:K] 
+            #self.WFstr2 = self.WFstr[N:2*N]
+            #self.WFstr3 = self.WFstr[2*N:3*N] 
+            #self.WFstr4 = self.WFstr[3*N:] 
 
         def writeToAG():
             '''
@@ -276,11 +278,12 @@ class SAGCoordinator(dripline.core.Endpoint):
             '''
             logger.info('in send to AG')
             #values = {'sag_waveform_array': self.WFstr}
-            values = {'sag_waveform_array_1': self.WFstr1, 
-                      'sag_waveform_array_2': self.WFstr2,
-                      'sag_waveform_array_3': self.WFstr3,
-                      'sag_waveform_array_4': self.WFstr4}
-            logger.info('setting waveform array: '+self.WFstr)
+            #values = {'sag_waveform_array_1': self.WFstr1, 
+            #          'sag_waveform_array_2': self.WFstr2,
+            #          'sag_waveform_array_3': self.WFstr3,
+            #          'sag_waveform_array_4': self.WFstr4}
+            values = {"sag_waveform_array_"+str(i):val for i,val in enumerate(self.WFstrsegs)}
+            logger.info('setting waveform array in '+str(len(values))+' segments: '+self.WFstr)
             self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
             logger.info('sending waveform')
