@@ -282,7 +282,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             #          'sag_waveform_array_2': self.WFstr2,
             #          'sag_waveform_array_3': self.WFstr3,
             #          'sag_waveform_array_4': self.WFstr4}
-            values = {"sag_waveform_array_"+str(i):val for i,val in enumerate(self.WFstrsegs)}
+            values = {"sag_waveform_array_"+str(i+1):val for i,val in enumerate(self.WFstrsegs)}
             logger.info('setting waveform array in '+str(len(values))+' segments: '+self.WFstr)
             self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
