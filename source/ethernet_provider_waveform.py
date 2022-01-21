@@ -1,6 +1,9 @@
 import dripline
 from dragonfly.implementations import EthernetProvider
 
+import logging
+logger = logging.getLogger('dragonfly.custom.sag_interface')
+
 class EthernetProviderWaveform(EthernetProvider):
     '''
     An EthernetProvider class for interacting with the arb (Agilent 33220A), particularly for handling long waveform messages passed the the waveforme generator
@@ -18,12 +21,22 @@ class EthernetProviderWaveform(EthernetProvider):
        Takes list of endpoint command strings and concatenates them before send as single message
        For use w/ waveform endpoints to be passed to arbitrary waveform generator
         '''
+        logger.info('in send_waveform')
         # collect waveform writing endpoints, combine, and consolidate commands 
         waveform_write_command = ''
-        for command in commands:
-            waveform_write_command += command
-        # execute send from EthernetProvider      
+        waveform_write_command += commands['sag_arb_write_waveform_1']
+        waveform_write_command += commands['sag_arb_write_waveform_2']
+        waveform_write_command += commands['sag_arb_write_waveform_3']
+        waveform_write_command += commands['sag_arb_write_waveform_4']
+        #for command in commands:
+        #    waveform_write_command += command
+        # execute send from EthernetProvider for waveform write to arb volitile memory   
+        logger.info('sending command to arb starting with: "'+waveform_write_command[0:10]+'", and of length: '+str(len(waveform_write_command)))
         self.send(waveform_write_command, **parameters)
+        # execute send from EthernetProvider for waveform copy and save to linshape 
+        waveform_save_command = commands['sag_arb_save_waveform']
+        logger.info('sending command to arb starting with: "'+waveform_save_command[0:10]+'", and of length: '+str(len(waveform_save_command)))
+        self.send(waveform_save_command, **parameters)
         return None
     
     pass
