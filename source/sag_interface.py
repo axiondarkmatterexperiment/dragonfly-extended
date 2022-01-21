@@ -289,6 +289,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             logger.info('set complete')
             logger.info('sending waveform')
             self.provider.cmd(self.update_waveform_sets, 'sag_arb.send_waveform')
+            logger.info('waveform sent')
             return None
 
         # execute the in-method functions to generate the time series (and load to the waveform generator?)
