@@ -27,9 +27,9 @@ class EthernetProviderWaveform(EthernetProvider):
         for endpoint in commands:
             commands_dict.update(endpoint) 
         waveform_write_command = commands_dict['sag_arb_write_waveform_0']
-        waveform_write_command += commands_dict['sag_arb_write_waveform_1']
-        waveform_write_command += commands_dict['sag_arb_write_waveform_2']
-        waveform_write_command += commands_dict['sag_arb_write_waveform_3']
+        waveform_write_command += commands_dict['sag_arb_write_waveform_1']+', ' # additional characters required for total waveform to be interpreted as list
+        waveform_write_command += commands_dict['sag_arb_write_waveform_2']+', '
+        waveform_write_command += commands_dict['sag_arb_write_waveform_3']+', '
         waveform_write_command += commands_dict['sag_arb_write_waveform_4']
         #for command in commands:
         #    waveform_write_command += command
