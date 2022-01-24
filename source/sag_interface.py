@@ -287,6 +287,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             logger.info('setting waveform array in '+str(len(values))+' segments: '+self.WFstr)
             self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
+            logger.info('update_waveform_sets updated to: "+str(self.update_waveform_sets))
             logger.info('sending waveform')
             self.provider.cmd(self.update_waveform_sets, 'sag_arb.send_waveform')
             logger.info('waveform sent')
