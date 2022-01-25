@@ -73,20 +73,20 @@ class SAGCoordinator(dripline.core.Endpoint):
         set_list = []
         # first parse all string evaluations, make sure they all work before doing any actual setting
         for a_calculated_set in these_sets:
-            logger.debug("dealing with calculated_set: {}".format(a_calculated_set))
+            logger.info("dealing with calculated_set: {}".format(a_calculated_set)) # updated from debug to info
             if len(a_calculated_set) > 1:
                 raise dripline.core.DriplineValueError('all calculated sets must be a single entry dict')
             [(this_endpoint,set_str)] = six.iteritems(a_calculated_set)
-            logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
+            logger.info('trying to understand: {}->{}'.format(this_endpoint, set_str)) # updated from debug to info
             this_value = set_str
             if '{' in set_str and '}' in set_str:
                 try:
                     this_set = set_str.format(**values)
                 except KeyError as e:
                     raise dripline.core.DriplineValueError("required parameter, <{}>, not provided".format(e.message))
-                logger.debug('substitutions make that RHS = {}'.format(this_set))
+                logger.info('substitutions make that RHS = {}'.format(this_set)) # updated from debug to info
                 this_value = self.evaluator(this_set)
-                logger.debug('or a set value of {}'.format(this_value))
+                logger.info('or a set value of {}'.format(this_value)) # updated from debug to info
             set_list.append((this_endpoint, this_value))
         # now actually try to set things
         for this_endpoint, this_value in set_list:
@@ -225,7 +225,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             This function reads out the tscaled spectrum and returns all values of tscaled as a string
             '''
             self.scale = [int(number) for number in self.scale] # redundant to reScale, yes, but necessary for unknown reasons
-            logger.info('waveform element numbers of of type: '+str(type(self.scale[0])))
+            logger.info('waveform element numbers of type: '+str(type(self.scale[0])))
             self.msg="DATA:DAC VOLATILE, "
             self.WFstr = ""
             
