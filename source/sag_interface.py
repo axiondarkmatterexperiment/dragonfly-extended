@@ -224,13 +224,15 @@ class SAGCoordinator(dripline.core.Endpoint):
             '''
             This function reads out the tscaled spectrum and returns all values of tscaled as a string
             '''
+            self.scale = [int(number) for number in self.scale] # redundant to reScale, yes, but necessary for unknown reasons
+            logger.info('waveform element numbers of of type: '+str(type(self.scale[0])))
             self.msg="DATA:DAC VOLATILE, "
             self.WFstr = ""
             
             N=np.size(self.scale)
             
             for i in range(0, N):
-                self.WFstr+=str(self.scale[i])
+                self.WFstr+=str(int(self.scale[i]))
                 if i<N-1:
                     self.WFstr+=", "
             
@@ -238,8 +240,8 @@ class SAGCoordinator(dripline.core.Endpoint):
             self.msg+="\n"
             # also partitioning the waveform string into J parts
             J = 4
-            K = N//(J-1)                
-            self.WFstrsegs = {"sag_waveform_array_"+str(i+1): str(self.scale[i*K:(i+1)*K])[1:-1] for i in range(0,J)}
+            K = N//(J-1)     
+            self.WFstrsegs = {"sag_waveform_array_"+str(i+1): ', '.join([str(val) for val in self.scale[i*K:(i+1)*K]]) for i in range(0,J)}
             #N = len(self.WFstr)//4
             #self.WFstr1 = self.WFstr[0:N] 
             #self.WFstr2 = self.WFstr[N:2*N]
