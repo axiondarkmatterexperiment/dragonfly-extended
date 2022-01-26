@@ -73,24 +73,25 @@ class SAGCoordinator(dripline.core.Endpoint):
         set_list = []
         # first parse all string evaluations, make sure they all work before doing any actual setting
         for a_calculated_set in these_sets:
-            logger.info("dealing with calculated_set: {}".format(a_calculated_set)) # updated from debug to info
+            logger.debug("dealing with calculated_set: {}".format(a_calculated_set))
             if len(a_calculated_set) > 1:
                 raise dripline.core.DriplineValueError('all calculated sets must be a single entry dict')
             [(this_endpoint,set_str)] = six.iteritems(a_calculated_set)
-            logger.info('trying to understand: {}->{}'.format(this_endpoint, set_str)) # updated from debug to info
+            logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
             this_value = set_str
             if '{' in set_str and '}' in set_str:
                 try:
                     this_set = set_str.format(**values)
                 except KeyError as e:
                     raise dripline.core.DriplineValueError("required parameter, <{}>, not provided".format(e.message))
-                logger.info('substitutions make that RHS = {}'.format(this_set)) # updated from debug to info
+                logger.debug('substitutions make that RHS = {}'.format(this_set))
                 this_value = self.evaluator(this_set)
-                logger.info('or a set value of {}'.format(this_value)) # updated from debug to info
+                logger.debug('or a set value of {}'.format(this_value))
             set_list.append((this_endpoint, this_value))
         # now actually try to set things
         for this_endpoint, this_value in set_list:
             #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
+            logger.info("setting endpoint '"+str(this_endpoint)+"' with value: "+str(this_value)) 
             self.provider.set(this_endpoint, this_value)
 
     #def _do_log_noset_sensors(self):
