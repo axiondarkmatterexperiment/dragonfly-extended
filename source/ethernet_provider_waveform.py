@@ -1,3 +1,5 @@
+import sys
+sys.path.append('/usr/local/src/dripline-cpp/build/')
 import scarab
 import dripline
 from dripline.core import op_t, MsgRequest, DriplineError
