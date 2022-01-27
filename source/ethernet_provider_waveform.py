@@ -1,12 +1,25 @@
 #import sys
 #sys.path.append('/usr/local/src/dripline-cpp/build/')
 #import scarab
+import logging
+logger = logging.getLogger('dragonfly.custom.sag_interface')
+
+import platform
+import socket
+import os
+logger.info("directory of this file: "+os.path.dirname(os.path.realpath(__file__)))
+logger.info("working directory: "+os.getcwd())
+logger.info("provider host system: "+platform.system())
+logger.info("provider host release: "+platform.release())
+logger.info("provider host name: "+socket.gethostname())
+logger.info("provider host version: "+platform.version())
+        
 import dripline
 from dripline.core import op_t, MsgRequest, DriplineError
 from dragonfly.implementations import EthernetProvider
 
-import logging
-logger = logging.getLogger('dragonfly.custom.sag_interface')
+# import logging
+# logger = logging.getLogger('dragonfly.custom.sag_interface')
 
 class EthernetProviderWaveform(EthernetProvider):
     '''
