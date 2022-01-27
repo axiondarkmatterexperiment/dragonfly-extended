@@ -1,25 +1,23 @@
 #import sys
 #sys.path.append('/usr/local/src/dripline-cpp/build/')
 #import scarab
-import logging
-logger = logging.getLogger('dragonfly.custom.sag_interface')
 
-import platform
-import socket
-import os
-logger.info("directory of this file: "+os.path.dirname(os.path.realpath(__file__)))
-logger.info("working directory: "+os.getcwd())
-logger.info("provider host system: "+platform.system())
-logger.info("provider host release: "+platform.release())
-logger.info("provider host name: "+socket.gethostname())
-logger.info("provider host version: "+platform.version())
+# import platform
+# import socket
+# import os
+# logger.info("directory of this file: "+os.path.dirname(os.path.realpath(__file__)))
+# logger.info("working directory: "+os.getcwd())
+# logger.info("provider host system: "+platform.system())
+# logger.info("provider host release: "+platform.release())
+# logger.info("provider host name: "+socket.gethostname())
+# logger.info("provider host version: "+platform.version())
         
 import dripline
-from dripline.core import op_t, MsgRequest, DriplineError
+from dripline.core import MsgRequest, DriplineError, op_t
 from dragonfly.implementations import EthernetProvider
 
-# import logging
-# logger = logging.getLogger('dragonfly.custom.sag_interface')
+import logging
+logger = logging.getLogger('dragonfly.custom.sag_interface')
 
 class EthernetProviderWaveform(EthernetProvider):
     '''
@@ -53,6 +51,11 @@ class EthernetProviderWaveform(EthernetProvider):
         internal helper method to standardize generating requests for partial messages
         returns (partial) message request
         '''
+        # import scarab just in time
+        import sys
+        sys.path.append('/usr/local/src/dripline-cpp/build/')
+        import scarab
+        # now to generate request
         a_specifier = specifier if specifier is not None else ""
         #a_request = MsgRequest.create(payload=scarab.to_param(payload), msg_op=msgop, routing_key=target, specifier=a_specifier)
         a_request = MsgRequest.create(payload=payload, msg_op=msgop, routing_key=target, specifier=a_specifier)
