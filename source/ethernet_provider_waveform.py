@@ -1,6 +1,6 @@
-import sys
-sys.path.append('/usr/local/src/dripline-cpp/build/')
-import scarab
+#import sys
+#sys.path.append('/usr/local/src/dripline-cpp/build/')
+#import scarab
 import dripline
 from dripline.core import op_t, MsgRequest, DriplineError
 from dragonfly.implementations import EthernetProvider
@@ -41,7 +41,8 @@ class EthernetProviderWaveform(EthernetProvider):
         returns (partial) message request
         '''
         a_specifier = specifier if specifier is not None else ""
-        a_request = MsgRequest.create(payload=scarab.to_param(payload), msg_op=msgop, routing_key=target, specifier=a_specifier)
+        #a_request = MsgRequest.create(payload=scarab.to_param(payload), msg_op=msgop, routing_key=target, specifier=a_specifier)
+        a_request = MsgRequest.create(payload=payload, msg_op=msgop, routing_key=target, specifier=a_specifier)
         #receive_reply = self.send(a_request)
         #if not receive_reply.successful_send:
         #    raise DriplineError('unable to send request')
