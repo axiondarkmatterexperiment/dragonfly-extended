@@ -93,6 +93,38 @@ class SAGCoordinator(dripline.core.Endpoint):
             #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
             logger.info("setting endpoint '"+str(this_endpoint)+"' with value: "+str(this_value)) 
             self.provider.set(this_endpoint, this_value)
+            
+    def _do_set_collection_partial(self, these_sets, values):
+        '''
+        A utility method for processing a list of sets
+        returns dictionary of partial messages, keyed by endpoint name
+        '''
+        set_list = []
+        # first parse all string evaluations, make sure they all work before doing any actual setting
+        for a_calculated_set in these_sets:
+            logger.debug("dealing with calculated_set: {}".format(a_calculated_set))
+            if len(a_calculated_set) > 1:
+                raise dripline.core.DriplineValueError('all calculated sets must be a single entry dict')
+            [(this_endpoint,set_str)] = six.iteritems(a_calculated_set)
+            logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
+            this_value = set_str
+            if '{' in set_str and '}' in set_str:
+                try:
+                    this_set = set_str.format(**values)
+                except KeyError as e:
+                    raise dripline.core.DriplineValueError("required parameter, <{}>, not provided".format(e.message))
+                logger.debug('substitutions make that RHS = {}'.format(this_set))
+                this_value = self.evaluator(this_set)
+                logger.debug('or a set value of {}'.format(this_value))
+            set_list.append((this_endpoint, this_value))
+        # now actually try to set things
+        result = {}
+        for this_endpoint, this_value in set_list:
+            #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
+            logger.info("setting endpoint '"+str(this_endpoint)+"' with value: "+str(this_value)) 
+            this_message = self.provider.set_partial(this_endpoint, this_value)
+            result.update({this_endpoint: this message})
+        return result
 
     #def _do_log_noset_sensors(self):
     def _do_extra_logs(self, sensors_list):
@@ -289,11 +321,11 @@ class SAGCoordinator(dripline.core.Endpoint):
             values = self.WFstrsegs
             logger.info('setting waveform array in '+str(len(values))+' segments: '+self.WFstr)
             logger.info('update_waveform_sets: '+str(self.update_waveform_sets))
-            self._do_set_collection(self.update_waveform_sets, values)
+            msg_parts = self._do_set_collection_partial(self.update_waveform_sets, values)
             logger.info('set complete')
-            logger.info('update_waveform_sets updated to: '+str(self.update_waveform_sets))
+            logger.info('message parts logged as: '+str(msg_parts))
             logger.info('sending waveform')
-            self.provider.cmd(self.update_waveform_sets, 'sag_arb.send_waveform')
+            self.provider.cmd([msg_parts], 'sag_arb.send_waveform')
             logger.info('waveform sent')
             return None
 
