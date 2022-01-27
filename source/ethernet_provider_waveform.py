@@ -1,5 +1,5 @@
-import dripline
 import scarab
+import dripline
 from dripline.core import op_t, MsgRequest, DriplineError
 from dragonfly.implementations import EthernetProvider
 
