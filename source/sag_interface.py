@@ -123,7 +123,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
             logger.info("setting endpoint '"+str(this_endpoint)+"' with value: "+str(this_value)) 
             this_message = self.provider.set_partial(this_endpoint, this_value)
-            result.update({this_endpoint: this message})
+            result.update({this_endpoint: this_message})
         return result
 
     #def _do_log_noset_sensors(self):
