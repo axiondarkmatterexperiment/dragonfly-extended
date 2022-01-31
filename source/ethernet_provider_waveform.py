@@ -79,7 +79,7 @@ class EthernetProviderWaveform(EthernetProvider):
         # execute send from EthernetProvider for waveform write to arb volitile memory   
         self.send(write_waveform_cmd_string, **parameters)
         # execute send from EthernetProvider for waveform copy and save to linshape 
-        save_waveform_cmd_string = waveform_store_endpoints['sag_arb_save_waveform'].save_cmd
+        save_waveform_cmd_string = waveform_store_endpoints['sag_arb_save_waveform'].on_set
         self.send(save_waveform_cmd_string, **parameters)
         return None
     
