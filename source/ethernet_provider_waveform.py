@@ -1,17 +1,3 @@
-#import sys
-#sys.path.append('/usr/local/src/dripline-cpp/build/')
-#import scarab
-
-# import platform
-# import socket
-# import os
-# logger.info("directory of this file: "+os.path.dirname(os.path.realpath(__file__)))
-# logger.info("working directory: "+os.getcwd())
-# logger.info("provider host system: "+platform.system())
-# logger.info("provider host release: "+platform.release())
-# logger.info("provider host name: "+socket.gethostname())
-# logger.info("provider host version: "+platform.version())
-        
 import dripline
 from dripline.core import MsgRequest, DriplineError, op_t
 from dragonfly.implementations import EthernetProvider
@@ -23,12 +9,14 @@ class EthernetProviderWaveform(EthernetProvider):
     '''
     An EthernetProvider class for interacting with the arb (Agilent 33220A), particularly for handling long waveform messages passed the the waveforme generator
     '''
-    def __init__(self,**kwargs):
+    def __init__(self,write_waveform_prefix="DATA:DAC VOLATILE ",write_waveform_terminator=" \n",**kwargs):
         '''
         Initialize EthernetProvider parent
 
         '''
         EthernetProvider.__init__(self, **kwargs)
+        self.write_waveform_prefix = write_waveform_prefix
+        self.write_waveform_terminator = write_waveform_terminator
         return None
     
     def set_partial(self, endpoint, value, specifier=None, timeout=0):
@@ -79,15 +67,20 @@ class EthernetProviderWaveform(EthernetProvider):
         waveform_write_command += commands_dict['sag_arb_write_waveform_2']+', '
         waveform_write_command += commands_dict['sag_arb_write_waveform_3']+', '
         waveform_write_command += commands_dict['sag_arb_write_waveform_4']
-        #for command in commands:
-        #    waveform_write_command += command
+        logger.info('structure of endpoint object: '+str(self._endpoints['sag_arb_store_waveform_0']))
+        logger.info('structure of endpoint object: '+str(self._endpoints['sag_arb_store_waveform_0'].__dict__.keys()))
+        waveform_store_endpoints = { k:v for k,v in self._endpoints.items() if 'sag_arb_store_waveform_' in k }
+        N_endpoints = len(waveform_store_endpoints)
+        waveform_list = []
+        for i in range(0,N_endpoints):
+                waveform_list.append(waveform_store_endpoints['sag_arb_store_waveform_'+str(i)].on_set)
+        waveform_string = ', '.join([str(val) for val in waveform_list])
+        write_waveform_cmd_string = self.write_waveform_prefix + waveform_string + self.write_waveform_terminator
         # execute send from EthernetProvider for waveform write to arb volitile memory   
-        #logger.info('sending command to arb starting with: "'+waveform_write_command[0:10]+'", and of length: '+str(len(waveform_write_command)))
-        self.send(waveform_write_command, **parameters)
+        self.send(write_waveform_cmd_string, **parameters)
         # execute send from EthernetProvider for waveform copy and save to linshape 
-        waveform_save_command = commands_dict['sag_arb_save_waveform']
-        #logger.info('sending command to arb starting with: "'+waveform_save_command[0:10]+'", and of length: '+str(len(waveform_save_command)))
-        self.send(waveform_save_command, **parameters)
+        save_waveform_cmd_string = waveform_store_endpoints['sag_arb_save_waveform'].on_set
+        self.send(save_waveform_cmd_string, **parameters)
         return None
     
     pass
