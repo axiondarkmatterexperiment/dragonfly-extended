@@ -274,12 +274,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             # also partitioning the waveform string into J parts
             J = 4
             K = N//(J-1)     
-            self.WFstrsegs = {"sag_waveform_array_"+str(i+1): ', '.join([str(val) for val in self.scale[i*K:(i+1)*K]]) for i in range(0,J)}
-            #N = len(self.WFstr)//4
-            #self.WFstr1 = self.WFstr[0:N] 
-            #self.WFstr2 = self.WFstr[N:2*N]
-            #self.WFstr3 = self.WFstr[2*N:3*N] 
-            #self.WFstr4 = self.WFstr[3*N:] 
+            self.WFsegs = {"sag_waveform_array_"+str(i): self.scale[i*K:(i+1)*K]] for i in range(0,J)} 
 
         def writeToAG():
             '''
@@ -313,19 +308,13 @@ class SAGCoordinator(dripline.core.Endpoint):
             Iterates over messages to send to waveform generator to update line shape 
             '''
             logger.info('in send to AG')
-            #values = {'sag_waveform_array': self.WFstr}
-            #values = {'sag_waveform_array_1': self.WFstr1, 
-            #         'sag_waveform_array_2': self.WFstr2,
-            #         'sag_waveform_array_3': self.WFstr3,
-            #         'sag_waveform_array_4': self.WFstr4}
-            values = self.WFstrsegs
-            logger.info('setting waveform array in '+str(len(values))+' segments: '+self.WFstr)
+            values = self.WFsegs
+            logger.info('setting waveform array in '+str(len(values))+' segments: '+str(values))
             logger.info('update_waveform_sets: '+str(self.update_waveform_sets))
-            msg_parts = self._do_set_collection_partial(self.update_waveform_sets, values)
+            self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
-            logger.info('message parts logged as: '+str(msg_parts))
             logger.info('sending waveform')
-            self.provider.cmd([msg_parts], 'sag_arb.send_waveform')
+            self.provider.cmd([], 'sag_arb.send_waveform') # empty command list as sets should have passed the messages through to the arb service and can be locally accessed there
             logger.info('waveform sent')
             return None
 
