@@ -73,13 +73,13 @@ class EthernetProviderWaveform(EthernetProvider):
         N_endpoints = len(waveform_store_endpoints)
         waveform_list = []
         for i in range(0,N_endpoints):
-                waveform_list.append(waveform_store_endpoints['sag_arb_store_waveform_'+str(i)].on_set)
+                waveform_list.append(waveform_store_endpoints['sag_arb_store_waveform_'+str(i)].waveform_segment)
         waveform_string = ', '.join([str(val) for val in waveform_list])
         write_waveform_cmd_string = self.write_waveform_prefix + waveform_string + self.write_waveform_terminator
         # execute send from EthernetProvider for waveform write to arb volitile memory   
         self.send(write_waveform_cmd_string, **parameters)
         # execute send from EthernetProvider for waveform copy and save to linshape 
-        save_waveform_cmd_string = waveform_store_endpoints['sag_arb_save_waveform'].on_set
+        save_waveform_cmd_string = waveform_store_endpoints['sag_arb_save_waveform'].save_cmd
         self.send(save_waveform_cmd_string, **parameters)
         return None
     
