@@ -7,37 +7,10 @@ __all__ = ['StoreWaveform']
 
 logger = logging.getLogger(__name__)
 
-# @fancy_doc
-# class kv_store(Provider):
-#     """
-#     The KV store.  This is just a wrapper around a dict.
-#     """
-#     def __init__(self, **kwargs):
-#         Provider.__init__(self, **kwargs)
-
-#     def endpoint(self, endpoint):
-#         """
-#         Return the endpoint associated with some key.
-#         """
-#         return self.endpoints[endpoint]
-
-#     def list_endpoints(self):
-#         """
-#         List all endpoints associated with this KV store.
-#         This is the same as enumerating the keys in the
-#         dict.
-#         """
-#         return self.keys()
-
-#     def send(self, to_send):
-#         logger.info('asked to send:\n{}'.format(to_send))
-
-
-#@fancy_doc
+@fancy_doc
 class StoreWaveform(Spime):
     """
     Endpoint for storing SAG waveform segments
-    A key in the KV store.
     """
     def __init__(self, initial_value=None, **kwargs):
         Spime.__init__(self, **kwargs)
@@ -61,5 +34,5 @@ class StoreWaveform(Spime):
             value = list(value)
             self._value = value
         except ValueError:
-            self._value = value
+            self._value = []
         return self._value
