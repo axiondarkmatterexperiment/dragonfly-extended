@@ -23,8 +23,10 @@ class EthernetProviderWaveform(EthernetProvider):
     
     def send_waveform(self,other_messages,**parameters):
         '''
-       Takes list of waveform strings, concatenates them, then sends tham to the Agilent 33220A as single message
+       Takes list of waveform strings, concatenates them, then sends tham to the Agilent 33220A as a single list
        For use w/ waveform endpoints to be passed to arbitrary waveform generator
+       
+       other_messages: (dict|None) contains location on the arb the new waveform should be saved to  
         '''
         logger.info('in send_waveform')
         # collect waveform storing endpoints, combine, and send
