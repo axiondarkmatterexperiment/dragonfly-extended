@@ -94,37 +94,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             logger.info("setting endpoint '"+str(this_endpoint)+"' with value: "+str(this_value)) 
             self.provider.set(this_endpoint, this_value)
             
-    def _do_set_collection_partial(self, these_sets, values):
-        '''
-        A utility method for processing a list of sets
-        returns dictionary of partial messages, keyed by endpoint name
-        '''
-        set_list = []
-        # first parse all string evaluations, make sure they all work before doing any actual setting
-        for a_calculated_set in these_sets:
-            logger.debug("dealing with calculated_set: {}".format(a_calculated_set))
-            if len(a_calculated_set) > 1:
-                raise dripline.core.DriplineValueError('all calculated sets must be a single entry dict')
-            [(this_endpoint,set_str)] = six.iteritems(a_calculated_set)
-            logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
-            this_value = set_str
-            if '{' in set_str and '}' in set_str:
-                try:
-                    this_set = set_str.format(**values)
-                except KeyError as e:
-                    raise dripline.core.DriplineValueError("required parameter, <{}>, not provided".format(e.message))
-                logger.debug('substitutions make that RHS = {}'.format(this_set))
-                this_value = self.evaluator(this_set)
-                logger.debug('or a set value of {}'.format(this_value))
-            set_list.append((this_endpoint, this_value))
-        # now actually try to set things
-        result = {}
-        for this_endpoint, this_value in set_list:
-            #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
-            logger.info("setting endpoint '"+str(this_endpoint)+"' with value: "+str(this_value)) 
-            this_message = self.provider.set_partial(this_endpoint, this_value)
-            result.update({this_endpoint: this_message})
-        return result
+
 
     #def _do_log_noset_sensors(self):
     def _do_extra_logs(self, sensors_list):
@@ -274,12 +244,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             # also partitioning the waveform string into J parts
             J = 4
             K = N//(J-1)     
-            self.WFstrsegs = {"sag_waveform_array_"+str(i+1): ', '.join([str(val) for val in self.scale[i*K:(i+1)*K]]) for i in range(0,J)}
-            #N = len(self.WFstr)//4
-            #self.WFstr1 = self.WFstr[0:N] 
-            #self.WFstr2 = self.WFstr[N:2*N]
-            #self.WFstr3 = self.WFstr[2*N:3*N] 
-            #self.WFstr4 = self.WFstr[3*N:] 
+            self.WFsegs = {"sag_waveform_array_"+str(i): self.scale[i*K:(i+1)*K]] for i in range(0,J)} 
 
         def writeToAG():
             '''
@@ -313,19 +278,14 @@ class SAGCoordinator(dripline.core.Endpoint):
             Iterates over messages to send to waveform generator to update line shape 
             '''
             logger.info('in send to AG')
-            #values = {'sag_waveform_array': self.WFstr}
-            #values = {'sag_waveform_array_1': self.WFstr1, 
-            #         'sag_waveform_array_2': self.WFstr2,
-            #         'sag_waveform_array_3': self.WFstr3,
-            #         'sag_waveform_array_4': self.WFstr4}
-            values = self.WFstrsegs
-            logger.info('setting waveform array in '+str(len(values))+' segments: '+self.WFstr)
+            values = self.WFsegs
+            logger.info('setting waveform array in '+str(len(values))+' segments: '+str(values))
             logger.info('update_waveform_sets: '+str(self.update_waveform_sets))
-            msg_parts = self._do_set_collection_partial(self.update_waveform_sets, values)
+            self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
-            logger.info('message parts logged as: '+str(msg_parts))
             logger.info('sending waveform')
-            self.provider.cmd([msg_parts], 'sag_arb.send_waveform')
+            save_waveform_location = {'save_location':self.save_waveform_sets[0]['sag_arb_save_waveform']}
+            self.provider.cmd(save_waveform_location, 'sag_arb.send_waveform') # empty command list as sets should have passed the messages through to the arb service and can be locally accessed there
             logger.info('waveform sent')
             return None
 
