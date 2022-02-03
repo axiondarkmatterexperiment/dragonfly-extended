@@ -244,7 +244,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             # also partitioning the waveform string into J parts
             J = 4
             K = N//(J-1)     
-            self.WFsegs = {"sag_waveform_array_"+str(i): self.scale[i*K:(i+1)*K]] for i in range(0,J)} 
+            self.WFsegs = {"sag_waveform_array_"+str(i): self.scale[i*K:(i+1)*K] for i in range(0,J)} 
 
         def writeToAG():
             '''
