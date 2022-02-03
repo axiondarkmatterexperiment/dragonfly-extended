@@ -1,5 +1,4 @@
 import dripline
-from dripline.core import MsgRequest, DriplineError, op_t
 from dragonfly.implementations import EthernetProvider
 
 import logging
