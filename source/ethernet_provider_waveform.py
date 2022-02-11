@@ -20,7 +20,7 @@ class EthernetProviderWaveform(EthernetProvider):
         self.save_waveform_terminator = save_waveform_terminator
         return None
     
-    def send_waveform(self,other_messages,**parameters):
+    def send_waveform(self,*values,**parameters):
         '''
        Takes list of waveform strings, concatenates them, then sends tham to the Agilent 33220A as a single list
        For use w/ waveform endpoints to be passed to arbitrary waveform generator
@@ -29,8 +29,6 @@ class EthernetProviderWaveform(EthernetProvider):
         '''
         logger.info('in send_waveform')
         # collect waveform storing endpoints, combine, and send
-        logger.info('structure of endpoint object: '+str(self._endpoints['sag_arb_store_waveform_0']))
-        logger.info('structure of endpoint object: '+str(self._endpoints['sag_arb_store_waveform_0'].__dict__.keys()))
         store_waveform_endpoints = { k:v for k,v in self._endpoints.items() if 'sag_arb_store_waveform_' in k }
         N_endpoints = len(store_waveform_endpoints)
         waveform_list = []
@@ -41,7 +39,8 @@ class EthernetProviderWaveform(EthernetProvider):
         # execute send from EthernetProvider for waveform write to arb volitile memory   
         self.send(write_waveform_cmd_string, **parameters)
         # execute send from EthernetProvider for waveform copy and save to linshape 
-        save_location = str(other_messages['save_location'])
+        save_location = values[0]
+        logger.info('saving waveform to location {}'.format(save_location))
         save_waveform_cmd_string = self.save_waveform_prefix + save_location + self.save_waveform_terminator
         self.send(save_waveform_cmd_string, **parameters)
         return None
