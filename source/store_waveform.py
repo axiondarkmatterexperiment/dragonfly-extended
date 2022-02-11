@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import logging
 
-from dripline.core import Provider, Spime, calibrate, fancy_doc
+from dripline.core import Provider, Spime, calibrate, fancy_doc, exceptions
 
 __all__ = ['StoreWaveform']
 
@@ -35,4 +35,5 @@ class StoreWaveform(Spime):
             self._value = value
         except ValueError:
             self._value = []
-        return self._value
+            raise exceptions.DriplineValueError("error while setting waveform value")
+        return 0
