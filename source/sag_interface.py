@@ -18,7 +18,7 @@ class SAGCoordinator(dripline.core.Endpoint):
     Coordinated interactions with all instruments within the broader sag system.
     Provides a single point of contact and uniform interface to the SAG.
     '''
-    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, update_waveform_sets=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, f_stan=60, f_rest=650000000, line_shape='maxwellian', **kwargs):
+    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, update_waveform_sets=None, sag_arb_waveform_name=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, f_stan=60, f_rest=650000000, line_shape='maxwellian', **kwargs):
         '''
         enable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to be ready to start output of a signal
         disable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to not produce any output
@@ -37,15 +37,15 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.disable_output_sets = disable_output_sets
         self.sag_injection_sets = sag_injection_sets
         self.update_waveform_sets = update_waveform_sets
+        self.sag_arb_waveform_name = sag_arb_waveform_name
         self.switch_endpoint = switch_endpoint
         self.extra_logs = extra_logs
         self.state_extra_logs = state_extra_logs
+        
 
         self.evaluator = asteval.Interpreter()
 
         # attributes for line shape generation into the waveform generator (33220A)
-        self.msg = ""
-        self.waveform_name = ""
         self.tscaled = []
         self.tseries = []
         self.spectrum = []
@@ -229,49 +229,13 @@ class SAGCoordinator(dripline.core.Endpoint):
             '''
             self.scale = [int(number) for number in self.scale] # redundant to reScale, yes, but necessary for unknown reasons
             logger.info('waveform element numbers of type: '+str(type(self.scale[0])))
-            self.msg="DATA:DAC VOLATILE, "
-            self.WFstr = ""
             
             N=np.size(self.scale)
             
-            for i in range(0, N):
-                self.WFstr+=str(int(self.scale[i]))
-                if i<N-1:
-                    self.WFstr+=", "
-            
-            self.msg+=self.WFstr 
-            self.msg+="\n"
             # also partitioning the waveform string into J parts
             J = 4
             K = N//(J-1)     
             self.WFsegs = {"sag_waveform_array_"+str(i): self.scale[i*K:(i+1)*K] for i in range(0,J)} 
-
-        def writeToAG():
-            '''
-            TCP_IP = a string representing a hostname in Internet domain notation or an IPv4 address
-            TCP_PORT = int
-            '''
-
-            TCP_IP='10.95.101.64'
-            TCP_PORT=5025
-            BUFFER_SIZE=1024
-
-            s=skt.socket(skt.AF_INET, skt.SOCK_STREAM) #creating a new socket
-            s.connect((TCP_IP, TCP_PORT)) #connect to a remote socket at address
-
-            msg3=self.msg
-            
-            msg2="FREQ 50 \n" #set frequency [Hz]
-            s.send(msg2.encode()) # messag needs to be encoded as a byte string
-
-            s.send(msg3.encode()) #sends tscaled to the socket
-            
-            self.waveform_name = 'MY_AXION4'
-            msg="DATA:COPY "+str(self.waveform_name)+"\n" #this saves the name of the line shape make modular on the line shape
-            s.send(msg.encode())
-            print("messages passed to arb")
-            s.close()
-            return
         
         def sendToAG():
             '''
