@@ -248,7 +248,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
             logger.info('instructing sag_arb service to save waveform to {}'.format(self.sag_arb_waveform_name))
-            self.provider.cmd('sag_arb','send_waveform',value=self.sag_arb_waveform_name) # empty command list as sets should have passed the messages through to the arb service and can be locally accessed there
+            self.provider.cmd('sag_arb','send_waveform',value=[self.sag_arb_waveform_name])
             logger.info('waveform sent')
             return None
 
