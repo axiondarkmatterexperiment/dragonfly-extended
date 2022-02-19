@@ -13,6 +13,7 @@ class EthernetProviderWaveform(EthernetProvider):
         Initialize EthernetProvider parent
 
         '''
+        logger.info('in EthernetProviderWaveform')
         EthernetProvider.__init__(self, **kwargs)
         self.write_waveform_prefix = write_waveform_prefix
         self.write_waveform_terminator = write_waveform_terminator
@@ -33,7 +34,7 @@ class EthernetProviderWaveform(EthernetProvider):
         N_endpoints = len(store_waveform_endpoints)
         waveform_list = []
         for i in range(0,N_endpoints):
-                waveform_list.append(store_waveform_endpoints['sag_arb_store_waveform_'+str(i)].get_value())
+                waveform_list.extend(store_waveform_endpoints['sag_arb_store_waveform_'+str(i)])
         waveform_string = ', '.join([str(val) for val in waveform_list])
         write_waveform_cmd_string = self.write_waveform_prefix + waveform_string + self.write_waveform_terminator
         # execute send from EthernetProvider for waveform write to arb volitile memory   
