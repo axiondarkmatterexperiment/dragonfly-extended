@@ -248,7 +248,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             self._do_set_collection(self.update_waveform_sets, values)
             logger.info('set complete')
             logger.info('instructing sag_arb service to save waveform to {}'.format(self.sag_arb_waveform_name))
-            self.provider.cmd('sag_arb','send_waveform',value=[self.sag_arb_waveform_name])
+            self.provider.cmd('sag_arb','send_waveform',value=[self.sag_arb_waveform_name],timeout=300)
             logger.info('waveform sent')
             return None
 
