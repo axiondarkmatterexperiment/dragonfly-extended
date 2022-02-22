@@ -8,7 +8,7 @@ class EthernetProviderWaveform(EthernetProvider):
     '''
     An EthernetProvider class for interacting with the arb (Agilent 33220A), particularly for handling long waveform messages passed the the waveforme generator
     '''
-    def __init__(self,write_waveform_prefix="DATA:DAC VOLATILE ",write_waveform_terminator=" \n",save_waveform_prefix="DATA:COPY ",save_waveform_terminator=" \n",**kwargs):
+    def __init__(self,write_waveform_prefix="DATA:DAC VOLATILE ",write_waveform_terminator=" \n",save_waveform_prefix="DATA:COPY ",save_waveform_terminator=", VOLATILE \n",**kwargs):
         '''
         Initialize EthernetProvider parent
 
@@ -23,10 +23,10 @@ class EthernetProviderWaveform(EthernetProvider):
     
     def send_waveform(self,*values,**parameters):
         '''
-       Takes list of waveform strings, concatenates them, then sends tham to the Agilent 33220A as a single list
-       For use w/ waveform endpoints to be passed to arbitrary waveform generator
+        Takes list of waveform strings, concatenates them, then sends tham to the Agilent 33220A as a single list
+        For use w/ waveform endpoints to be passed to arbitrary waveform generator
        
-       other_messages: (dict|None) contains location on the arb the new waveform should be saved to  
+        other_messages: (dict|None) contains location on the arb the new waveform should be saved to  
         '''
         logger.info('in send_waveform')
         # collect waveform storing endpoints, combine, and send
@@ -44,6 +44,25 @@ class EthernetProviderWaveform(EthernetProvider):
         logger.info('saving waveform to location {}'.format(save_location))
         save_waveform_cmd_string = self.save_waveform_prefix + save_location + self.save_waveform_terminator
         self.send(save_waveform_cmd_string, **parameters)
+        return None
+    
+    def retrieve_setting(self,*values,**parameters):
+        '''
+        Retrieves a handful settings
+        '''
+        waveform_location = values[0]
+        waveform_setting_1_string = "FUNC?"
+        return1 = self.send(waveform_stat_1_string,**parameters)
+        logger.info('function type set to: {}'.format(return1))
+        waveform_setting_2_string = "FREQ?"
+        self.send(waveform_stat_2_string,**parameters)
+        logger.info('frequency set to: {}'.format(return2))
+        waveform_setting_3_string = "MEM:STAT:NAME? 0"
+        self.send(waveform_stat_2_string,**parameters)
+        logger.info('Mem state name 0 set to: {}'.format(return3))
+        waveform_setting_4_string = "MEM:STAT:NAME? 4"
+        self.send(waveform_stat_2_string,**parameters)
+        logger.info('Mem state name 4 set to: {}'.format(return4))
         return None
     
     pass
