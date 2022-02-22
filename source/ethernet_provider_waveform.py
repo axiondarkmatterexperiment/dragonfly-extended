@@ -52,16 +52,16 @@ class EthernetProviderWaveform(EthernetProvider):
         '''
         waveform_location = values[0]
         waveform_setting_1_string = "FUNC?"
-        return1 = self.send(waveform_stat_1_string,**parameters)
+        return1 = self.send(waveform_setting_1_string,**parameters)
         logger.info('function type set to: {}'.format(return1))
         waveform_setting_2_string = "FREQ?"
-        self.send(waveform_stat_2_string,**parameters)
+        return2 = self.send(waveform_setting_2_string,**parameters)
         logger.info('frequency set to: {}'.format(return2))
         waveform_setting_3_string = "MEM:STAT:NAME? 0"
-        self.send(waveform_stat_2_string,**parameters)
+        return3 = self.send(waveform_setting_3_string,**parameters)
         logger.info('Mem state name 0 set to: {}'.format(return3))
         waveform_setting_4_string = "MEM:STAT:NAME? 4"
-        self.send(waveform_stat_2_string,**parameters)
+        return4 = self.send(waveform_setting_4_string,**parameters)
         logger.info('Mem state name 4 set to: {}'.format(return4))
         return None
     
