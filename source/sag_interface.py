@@ -272,7 +272,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             #self.waveform_name = 'MY_AXION4'
             msg="DATA:COPY "+str(self.sag_arb_waveform_name)+"\n" #this saves the name of the line shape make modular on the line shape
             s.send(msg.encode())
-            print("messages passed to arb")
+            logger.info("messages passed to arb")
             s.close()
             return None
         
