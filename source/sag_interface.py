@@ -302,11 +302,10 @@ class SAGCoordinator(dripline.core.Endpoint):
         FourierTrans()
         reScale()
         writeWF()
-        writeToAG()
-        #if self.send_thru_sag_arb_service:
-        #    sendToAG()
-        #else:
-        #    writeToAG()
+        if self.send_thru_sag_arb_service:
+            sendToAG()
+        else:
+            writeToAG()
 
         #print('\n--- Waveform of Type '+str(self.line_shape)+' at Center Frequency '+str(self.f_rest)+' Hz Saved as '+str(self.waveform_name)+'---\n', flush=True)
 
