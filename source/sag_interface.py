@@ -154,6 +154,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.f_rest = float(parameters['f_rest'])
         self.line_shape = str(parameters['shape_type'])
         self.send_thru_sag_arb_service = bool(parameters['use_sag_arb_service'])
+        logger.info('send_thru_sag_arb_service set to {}'.format(self.send_thru_sag_arb_service))
     
         def get_du():
 
@@ -254,7 +255,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             TCP_IP = a string representing a hostname in Internet domain notation or an IPv4 address
             TCP_PORT = int
             '''
-
+            logger.info('In writeToAG')
             TCP_IP='10.95.101.64'
             TCP_PORT=5025
             BUFFER_SIZE=1024
@@ -272,7 +273,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             #self.waveform_name = 'MY_AXION4'
             msg="DATA:COPY "+str(self.sag_arb_waveform_name)+"\n" #this saves the name of the line shape make modular on the line shape
             s.send(msg.encode())
-            print("messages passed to arb")
+            logger.info("messages passed to arb")
             s.close()
             return None
         
@@ -301,16 +302,16 @@ class SAGCoordinator(dripline.core.Endpoint):
         FourierTrans()
         reScale()
         writeWF()
-        if self.send_thru_sag_arb_service:
-            sendToAG()
-        else:
-            writeToAG()
+        writeToAG()
+        #if self.send_thru_sag_arb_service:
+        #    sendToAG()
+        #else:
+        #    writeToAG()
 
         #print('\n--- Waveform of Type '+str(self.line_shape)+' at Center Frequency '+str(self.f_rest)+' Hz Saved as '+str(self.waveform_name)+'---\n', flush=True)
 
         # self.provider.set('sag_arb_save_waveform',self.tscaled) #this will send this data string to endpoint
-            
-        
+        return None
 
             
 
