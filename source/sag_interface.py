@@ -153,6 +153,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         logger.info('in update waveform')
         self.f_rest = float(parameters['f_rest'])
         self.line_shape = str(parameters['shape_type'])
+        self.send_thru_sag_arb_service = bool(parameters['use_sag_arb_service'])
     
         def get_du():
 
@@ -229,13 +230,51 @@ class SAGCoordinator(dripline.core.Endpoint):
             '''
             self.scale = [int(number) for number in self.scale] # redundant to reScale, yes, but necessary for unknown reasons
             logger.info('waveform element numbers of type: '+str(type(self.scale[0])))
+            self.msg="DATA:DAC VOLATILE, "
+            self.WFstr = ""
             
             N=np.size(self.scale)
+            
+            for i in range(0, N):
+                self.WFstr+=str(int(self.scale[i]))
+                if i<N-1:
+                    self.WFstr+=", "
+            
+            self.msg+=self.WFstr 
+            self.msg+="\n"
             
             # also partitioning the waveform string into J parts
             J = 4
             K = N//(J-1)     
             self.WFsegs = {"sag_waveform_array_"+str(i): self.scale[i*K:(i+1)*K] for i in range(0,J)} 
+            return None
+        
+        def writeToAG():
+            '''
+            TCP_IP = a string representing a hostname in Internet domain notation or an IPv4 address
+            TCP_PORT = int
+            '''
+
+            TCP_IP='10.95.101.64'
+            TCP_PORT=5025
+            BUFFER_SIZE=1024
+
+            s=skt.socket(skt.AF_INET, skt.SOCK_STREAM) #creating a new socket
+            s.connect((TCP_IP, TCP_PORT)) #connect to a remote socket at address
+
+            msg3=self.msg
+            
+            msg2="FREQ 50 \n" #set frequency [Hz]
+            s.send(msg2.encode()) # message needs to be encoded as a byte string
+
+            s.send(msg3.encode()) #sends tscaled to the socket
+            
+            #self.waveform_name = 'MY_AXION4'
+            msg="DATA:COPY "+str(self.sag_arb_waveform_name)+"\n" #this saves the name of the line shape make modular on the line shape
+            s.send(msg.encode())
+            print("messages passed to arb")
+            s.close()
+            return None
         
         def sendToAG():
             '''
@@ -262,8 +301,10 @@ class SAGCoordinator(dripline.core.Endpoint):
         FourierTrans()
         reScale()
         writeWF()
-        sendToAG()
-        # writeToAG()
+        if self.send_thru_sag_arb_service:
+            sendToAG()
+        else:
+            writeToAG()
 
         #print('\n--- Waveform of Type '+str(self.line_shape)+' at Center Frequency '+str(self.f_rest)+' Hz Saved as '+str(self.waveform_name)+'---\n', flush=True)
 
