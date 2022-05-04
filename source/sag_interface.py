@@ -170,6 +170,113 @@ class SAGCoordinator(dripline.core.Endpoint):
         def max_term(x,i):
             term = ((((i-self.n)*self.f_stan)*self.h_eV)/(self.m_a*self.T))**x
             return term
+        
+        def normShape(sampleArray):
+            # returns unit normalized sample array by integrating array elements (sum) and dividing by the total
+            total = sampleArray.sum()
+            return sampleArray/total
+        
+        def bigFlows(fmass):
+            
+            # relative densities for each flow
+            gram2GeV = 1.e-3*consts.physical_constants["kilogram-electron volt relationship"][0]*1.e-9
+            rhoBig = 2.e-23*gram2GeV # GeV/cc
+            rhoLittle = 2.e-24*gram2GeV
+            rhoUp = 9.6e-24*gram2GeV
+            rhoDown = 8.4e-24*gram2GeV
+            # central velocities in Galactic center fixed frame
+            # using galactic cylindrical coordinates (vr,vphi,vz)
+            vBig = np.array((-104.4, 509.4, 6.1) )# km/s
+            vLittle = np.array((-0.2, 530.0, 4.5))
+            vUp = np.array((-115.3,505.1,44.8))
+            vDown = np.array((-116.4,505.4,-38.1))
+            # relative velocity of Sun to MW center, in galactic cylindrical basis
+            s = coord.SkyCoord(ra=[158.3122] * u.degree,
+                            dec=[-17.3] * u.degree,
+                            distance=[11.5] * u.kpc,
+                            frame='icrs')
+            s.transform_to(coord.Galactocentric(galcen_distance=8.1*u.kpc))
+            vSun = np.array((12.9, 245.6, 7.78)) # km/s s.galcen_v_sun # note thqat the x,y,z frame of icrs identifies with the galactic cylindrical coordinates
+            # speed dispersion of each flow
+            dv = 70. #m/s
+            # boosted central velocity into sun-stationary frame
+            vBigSol = vBig - vSun
+            vLittleSol = vLittle - vSun
+            vUpSol = vUp - vSun
+            vDownSol = vDown - vSun
+            
+            # determine central frequency for  each flow
+            fBig = fmass*(1. + 0.5*np.linalg.norm(vBigSol)**2/self.c**2)
+            fLittle = fmass*(1. + 0.5*np.linalg.norm(vLittleSol)**2/self.c**2)
+            fUp = fmass*(1. + 0.5*np.linalg.norm(vUpSol)**2/self.c**2)
+            fDown = fmass*(1. + 0.5*np.linalg.norm(vDownSol)**2/self.c**2)
+        
+            
+            # find index of bin close to each flow
+            idxBig = self.n+math.ceil((-self.f_rest+fBig)/self.f_stan)
+            idxLittle = self.n+math.ceil((-self.f_rest+fLittle)/self.f_stan)
+            idxUp = self.n+math.ceil((-self.f_rest+fUp)/self.f_stan)
+            idxDown = self.n+math.ceil((-self.f_rest+fDown)/self.f_stan)
+            
+            # set 1-bin amplitude using density of flow
+            amps = np.zeros(self.N)
+            amps[idxBig] += rhoBig
+            amps[idxLittle] += rhoLittle
+            amps[idxUp] += rhoUp
+            amps[idxDown] += rhoDown
+            
+            # normalize total shape
+            amps = normShape(amps)
+            return amps
+        
+        def MaxBoltz(E,vboost,beta):
+            # normalized isotropic 3D gaussian with speed argument
+            vb = np.linalg.norm(vboost)
+            amp = 2*(beta/np.pi)**(0.5)/vb*np.sinh(2*beta*np.sqrt(2*E)*vb)*np.exp(-2*E*beta-beta*vb**2)
+            return amp
+        
+        def BoseLobe(E,vboost,beta,vMean):
+            # normalized isotropic 1D gaussian with speed argument
+            vbplus = vboost + vMean
+            vbminus = vboost - vMean
+            vb = np.linalg.norm(vboost)
+            amp = (beta/np.pi)**(-0.5)*np.exp(-2*E*beta)
+            return amp
+        
+        def Lentz2020Shape(Df,Corr):
+            # sets the line shape result of Lentz 2020 "Axion Structure Formation II"
+            vVir = 130./self.c # fraction of c, virial speed of halo. Estimated by narrowed lineshape of Lentz et al 2017
+            beta = 1/vVir**2# effective temperature of halo central feature
+            vboost = np.array((0.,230./self.c, 0.)) # fraction of c, boost in the azimuthal direction of the glactic frame
+            
+            m = self.f_rest*self.h_eV # rest mass in eV
+            E = self.h_eV*Df/m # kinetic energy (energy above rest mass)
+            v = np.sqrt(2*E) # speed, not velocity, of axion at that energy
+            
+            centralGauss = MaxBoltz( E, vboost, beta) #4*np.pi*v**2*v*self.Gaussian3D(v,vboost,beta)*self.c**2 # gives the differential probability amplitude
+            #print(centralGauss)
+            vMeanBose = np.array((2.5*vVir,0,0)) # mean speed for Bose lobe, along +/- radial direction
+            betaBose = beta*4
+            
+            BoseLobe = 0.25*(MaxBoltz(E, vboost-vMeanBose, betaBose) + MaxBoltz(E, vboost+vMeanBose, betaBose)) #0.2*v*self.Gaussian1D(v-vMeanBose,vboost,betaBose) # normalized Bose lobe feature, assuming two radial velocity only and lobes are well separated 
+            
+            peakFunc = lambda x: 0.45 + 0.55*x**2
+            # superpose two contributions, using a correlation quadratic weighting 
+            pF = peakFunc(Corr)
+            GaussContr = pF*centralGauss
+            BoseContr = (1.-pF)*BoseLobe
+            amp = GaussContr + BoseContr
+            return amp
+    
+    
+        def BoseDM(fmass,Corr):
+            # set 1-bin amplitude using density of flow
+            amps = np.zeros(self.N)
+            for i in range(self.n,self.N):
+                amps[i] = Lentz2020Shape((i-self.n)*self.f_stan, Corr)
+            # normalize total shape
+            amps = normShape(amps)
+            return amps    
 
         def SAG_Spec():
             '''
@@ -177,15 +284,20 @@ class SAGCoordinator(dripline.core.Endpoint):
 
             u = (i-n)du where u dimensionless form of axion KE in lab frame
             r = ratio of the velocity of the Sun through the Galaxy to the rms halo velocity
-            max_2017 = maxwellian form from Lentz et al. 2017
+            max_2017 = N-body maxwellian form from Lentz et al. 2017
+            big_flows = Caustic ring flows (n=4?) from Pierre Sikivie halo model
+            bose_nbody_2020 = Bose N-body halo model from Lentz et al. 2020
             maxwellian = maxwellian form from Turner et al. 1990
             '''
             spec=np.zeros(self.N) 
             if self.line_shape == 'max_2017':
                 for i in range(self.n, self.N):
                     spec[i] = max_term(self.alpha,i)*math.exp(-(max_term(self.beta,i)))
-
-            else: 
+            elif self.line_shape == 'big_flows':
+                spec = bigFlows(self.f_rest)
+            elif self.line_shape == 'bose_nbody_2020':
+                spec = BoseDM(self.f_rest,0.0)
+            else:  # maxwellian
                 for i in range(self.n, self.N):
                     spec[i]=np.sqrt(np.sqrt(3/(2*np.pi))/self.r*np.exp(-1.5*(self.r*self.r+(i-self.n)*self.du))*np.sinh(3*self.r*np.sqrt((i-self.n)*self.du)))
 
