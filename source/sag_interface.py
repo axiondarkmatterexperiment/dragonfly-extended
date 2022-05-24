@@ -191,11 +191,6 @@ class SAGCoordinator(dripline.core.Endpoint):
             vUp = np.array((-115.3,505.1,44.8))
             vDown = np.array((-116.4,505.4,-38.1))
             # relative velocity of Sun to MW center, in galactic cylindrical basis
-            s = coord.SkyCoord(ra=[158.3122] * u.degree,
-                            dec=[-17.3] * u.degree,
-                            distance=[11.5] * u.kpc,
-                            frame='icrs')
-            s.transform_to(coord.Galactocentric(galcen_distance=8.1*u.kpc))
             vSun = np.array((12.9, 245.6, 7.78)) # km/s s.galcen_v_sun # note thqat the x,y,z frame of icrs identifies with the galactic cylindrical coordinates
             # speed dispersion of each flow
             dv = 70. #m/s
@@ -281,7 +276,6 @@ class SAGCoordinator(dripline.core.Endpoint):
         def SAG_Spec():
             '''
             This function generates the distribution function in terms of the axion kinetic energy   measured in the experiment's laboratory (Turner 1990 [5b]).
-
             u = (i-n)du where u dimensionless form of axion KE in lab frame
             r = ratio of the velocity of the Sun through the Galaxy to the rms halo velocity
             max_2017 = N-body maxwellian form from Lentz et al. 2017
@@ -383,7 +377,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             s.send(msg3.encode()) #sends tscaled to the socket
             
             #self.waveform_name = 'MY_AXION4'
-            msg="DATA:COPY "+str(self.sag_arb_waveform_name)+"\n" #this saves the name of the line shape make modular on the line shape
+            msg="DATA:COPY "+str(self.sag_arb_waveform_name)+"\n" #this saves the name of the line shape to long term memory
             s.send(msg.encode())
             logger.info("messages passed to arb")
             s.close()
@@ -423,9 +417,6 @@ class SAGCoordinator(dripline.core.Endpoint):
 
         # self.provider.set('sag_arb_save_waveform',self.tscaled) #this will send this data string to endpoint
         return None
-
-            
-
 
 
 
