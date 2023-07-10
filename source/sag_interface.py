@@ -20,7 +20,7 @@ class SAGCoordinator(dripline.core.Endpoint):
     Coordinated interactions with all instruments within the broader sag system.
     Provides a single point of contact and uniform interface to the SAG.
     '''
-    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, update_waveform_sets=None, sag_arb_waveform_name=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, f_stan=60, f_rest=650000000, line_shape='maxwellian', **kwargs):
+    def __init__(self, enable_output_sets=None, disable_output_sets=None, sag_injection_sets=None, update_waveform_sets=None, dummy_message_sets=None, sag_arb_waveform_name=None, switch_endpoint=None, extra_logs=[], state_extra_logs={}, f_stan=50, f_rest=650000000, line_shape='maxwellian', **kwargs):
         '''
         enable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to be ready to start output of a signal
         disable_output_sets: (list) - a sequence of endpoints and values to set to configure the system to not produce any output
@@ -39,6 +39,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.disable_output_sets = disable_output_sets
         self.sag_injection_sets = sag_injection_sets
         self.update_waveform_sets = update_waveform_sets
+        self.dummy_message_sets = dummy_message_sets # this is for a dummy test message to confirm message passing to arb service
         self.sag_arb_waveform_name = sag_arb_waveform_name
         self.switch_endpoint = switch_endpoint
         self.extra_logs = extra_logs
@@ -152,53 +153,71 @@ class SAGCoordinator(dripline.core.Endpoint):
         self._do_set_collection(self.sag_injection_sets, parameters)
 
     def update_waveform(self, **parameters):
+        '''
+        updates waveform of choice into the arb static memory slot of choice
+        '''
         logger.info('in update waveform')
         self.f_rest = float(parameters['f_rest'])
         self.line_shape = str(parameters['shape_type'])
+        self.sag_arb_waveform_name = str(parameters['arb_waveform_name'])
         self.send_thru_sag_arb_service = bool(parameters['use_sag_arb_service'])
         logger.info('send_thru_sag_arb_service set to {}'.format(self.send_thru_sag_arb_service))
     
         def SAG_Spec():
             '''
-            This function generates the distribution function in terms of the axion kinetic energy   measured in the experiment's laboratory (Turner 1990 [5b]).
-            u = (i-n)du where u dimensionless form of axion KE in lab frame
-            r = ratio of the velocity of the Sun through the Galaxy to the rms halo velocity
+            This function generates the spectral distribution function of the axion waveform due to the distribution of 
+            kinetic energy in the axion field as measured in the experiment's laboratory frame (taken from the supplied 
+            keyword arguments to update_waveform).
+            Four line shapes are supported:
             max_2017 = N-body maxwellian form from Lentz et al. 2017
             big_flows = Caustic ring flows (n=4?) from Pierre Sikivie halo model
             bose_nbody_2020 = Bose N-body halo model from Lentz et al. 2020
-            maxwellian = maxwellian form from Turner et al. 1990
+            maxwellian = isothermal sphere halo model form from Turner et al. 1990
             '''
-            spec=np.zeros(self.N) 
-            'SHM', 'n-body', 'bose', 'big flow'
-            if self.line_shape == 'max_2017':
+            spec=np.zeros(self.N)
+            if ("body" or "2017" or "max") in self.line_shape.lower():
                 line_shape = 'n-body'
-            elif self.line_shape == 'big_flows':
+            elif ("flow" or "big" or "sikivie") in self.line_shape.lower():
                 line_shape = 'big flows'
-                spec = bigFlows(self.f_rest)
-            elif self.line_shape == 'bose_nbody_2020':
+            elif ("bose" or "entangled" or "bec") in self.line_shape.lower():
                 line_shape = 'bose_nbody_2020'
-                spec = BoseDM(self.f_rest,0.0)
             else:  # maxwellian
                 line_shape = 'SHM'
-                for i in range(self.n, self.N):
-                    spec[i]=np.sqrt(np.sqrt(3/(2*np.pi))/self.r*np.exp(-1.5*(self.r*self.r+(i-self.n)*self.du))*np.sinh(3*self.r*np.sqrt((i-self.n)*self.du)))
             bandwidth = self.f_stan*(self.N - self.n)
-            spec = axion_waveform_lib(line_shape = line_shape,f_rest = self.f_rest,f_spacing = self.f_stan,bandwidth = bandwidth).get_freq_spec()
-
+            aw = axion_waveform_lib.axion_waveform_sampler(line_shape=line_shape, f_rest=self.f_rest, f_spacing=self.f_stan, \
+                     bandwidth = bandwidth)
+            spec, freqs = aw.get_freq_spec()
             self.spectrum = list(spec)
+            return None
 
-        def FourierTrans():
-            N=np.size(self.spectrum) 
-            tseries=np.fft.ifft(self.spectrum) #compute the one-dimensional inverse discrete Fourier Transform from frequency domain to time domain
+        def spectrum2Timeseries():
+            '''
+            This function takes the designated spectral function and converts it into a time series.
+            As the input is a (power) spectral function, we accomplish this by taking the square root of the PSF, 
+            give it a phase (from a uniform random distribution) and perform an inverse FFT.
+            '''
+            N=np.size(self.spectrum)
+            print(N)
+            sqrt_spectrum = np.sqrt(self.spectrum)
+            phases = 0#np.random.uniform(low=0,high=2*np.pi,size=N)
+            amplitudes_posf = (sqrt_spectrum*np.exp(1j*phases))[0:N//2]
+            amplitudes_negf = [np.conjugate(amp) for amp in amplitudes_posf]
+            if N%2==0:
+                amps_conc = list(amplitudes_posf) + list(reversed(amplitudes_negf))
+            else:
+                amps_conc = list(amplitudes_posf) + [0] + list(reversed(amplitudes_negf))
+            tseries=np.fft.ifft(amps_conc) 
+            #tseries_trunc = tseries
+            print(len(tseries))
+            #tseries=tseries.real 
             
-            tseries=tseries.real 
+            #re_tseries=np.zeros(self.N) 
             
-            re_tseries=np.zeros(self.N) 
-            
-            for j in range(0,self.N):
-                re_tseries[j]=tseries[j-self.N//2] #rescaled
+            #for j in range(0,self.N):
+            #    re_tseries[j]=tseries[j-self.N//2] #rescaled
 
-            self.re_tseries = re_tseries
+            self.re_tseries = list(tseries.real) # though it should be real already
+            return None
 
         def reScale():
             '''
@@ -217,6 +236,7 @@ class SAGCoordinator(dripline.core.Endpoint):
                 scale[i]=int(round((16382*(self.re_tseries[i]-minVal)/(maxVal-minVal))-8191))
             
             self.scale = scale
+            return None
 
         
         def writeWF():
@@ -292,7 +312,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         # execute the in-method functions to generate the time series (and load to the waveform generator?)
         #SAG = SAG_Maker(f_stan=self.f_stan, f_rest=self.f_rest, line_shape=self.line_shape)
         SAG_Spec()
-        FourierTrans()
+        spectrum2Timeseries()
         reScale()
         writeWF()
         if self.send_thru_sag_arb_service:
@@ -300,10 +320,34 @@ class SAGCoordinator(dripline.core.Endpoint):
         else:
             writeToAG()
 
-        #print('\n--- Waveform of Type '+str(self.line_shape)+' at Center Frequency '+str(self.f_rest)+' Hz Saved as '+str(self.waveform_name)+'---\n', flush=True)
-
-        # self.provider.set('sag_arb_save_waveform',self.tscaled) #this will send this data string to endpoint
         return None
+
+    def dummy_message(self,N,b):
+        """
+        Method for sending dummy message N items long with entries b bits each to the sag arb service
+        Will send both in stringified and list formats
+        """
+        b = int(b)
+        N = int(N)
+        Nlist = [2**b for i in range(N)]
+        stringlist = ""
+        for i,entry in enumerate(Nlist):
+                stringlist+=str(int(entry))
+                if i<N-1:
+                    stringlist+=", "
+        #print(stringlist)
+        values = [stringlist]
+        logger.info('sending dummy list string to SAG arb service')
+        self._do_set_collection(self.dummy_message_sets, values)
+        #self.provider.cmd('sag_arb','print_dummy_message',timeout=300)
+        
+        values = [Nlist]
+        logger.info('sending explicit list to SAG arb service')
+        self._do_set_collection(self.dummy_message_sets, values)
+        #self.provider.cmd('sag_arb','print_dummy_message',timeout=300)
+        return None
+
+
 
 
 
