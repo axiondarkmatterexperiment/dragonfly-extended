@@ -21,7 +21,7 @@ class axion_waveform_sampler():
         Currently supported 'SHM', 'n-body', 'bose', 'big flow'
         2) f_rest (float) optional: frequency in Hz of an axion at rest in observer reference frame
         3) f_spacing (int or float) optional: bin spacing for sampling of distribution, in Hz
-        4) bandwidth (float) optional: frequency bandwith being sammpled, in Hz, with lower endpoint at f_rest
+        4) bandwidth (float) optional: frequency bandwith being sampled, in Hz, with lower endpoint at f_rest
         5) v_bar (float) optional: mean speed of virialized dark matter in MW halo measured in the galactic center frame, in km/s
         6) r (float) optional: the ratio of the observer's orbital speed around MW relative to v_bar
 
