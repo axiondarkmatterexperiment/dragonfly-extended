@@ -65,4 +65,12 @@ class EthernetProviderWaveform(EthernetProvider):
         logger.info('Mem state name 4 set to: {}'.format(return4))
         return None
     
+    def print_dummy_message(self,*values):
+        '''
+        Prints a dummy message passed between sag interface and arb services
+        '''
+        dummy_message = {k:v for k,v in self._endpoints.items() if 'sag_arb_store_dummy_message' in k}
+        logger.info('dummy message stored as: {}'.format(dummy_message))
+        return None
+    
     pass
