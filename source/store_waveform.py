@@ -25,6 +25,7 @@ class StoreWaveform(Spime):
         value = self._value
         return value
 
+    
     def on_set(self, value):
         """
         Set the value associated with this key
