@@ -12,6 +12,7 @@ class StoreWaveform(Spime):
     """
     Endpoint for storing SAG waveform segments
     """
+    
     def __init__(self, initial_value=None, **kwargs):
         Spime.__init__(self, **kwargs)
         self._value = initial_value
@@ -31,6 +32,7 @@ class StoreWaveform(Spime):
         Set the value associated with this key
         to some new value.
         """
+        
         try:
             value = list(value)
             self._value = value
