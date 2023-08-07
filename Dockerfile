@@ -9,7 +9,11 @@ from ${img_user}/${img_repo}:${img_tag}
 RUN pip3 install PyModbusTCP
 RUN pip3 install pyserial
 #RUN pip3 install scipy
-RUN apt-get update && apt-get install -y python3-scipy
+RUN sed -i -e 's/deb.debian.org/archive.debian.org/g' \
+           -e 's|security.debian.org|archive.debian.org/|g' \
+           -e '/stretch-updates/d' /etc/apt/sources.list &&\
+    apt-get update &&\
+    apt-get install -y python3-scipy
 RUN if (uname -a | grep arm); then pip3 install --upgrade setuptools ; fi
 RUN if (uname -a | grep arm); then pip3 install RPi.GPIO Adafruit_ADS1x15 ; fi
 
