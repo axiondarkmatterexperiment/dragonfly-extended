@@ -335,28 +335,18 @@ def fit_reflection(iq_data,frequencies):
     delay_time_guess=0
     p0=[norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
     print("p0 is {}".format(p0))
-    def fit_fcn(x):
-        norm=x[0]
-        phase=x[1]
-        f0=x[2]
-        Q=x[3]
-        beta=x[4]
-        delay_time=x[5]
-        yp=reflection_iq_shape_their(frequencies,norm,phase,f0,Q,beta,delay_time)
-        yfit = repack_iq_data(np.real(yp),np.imag(yp))
-        return yfit
+    def fit_fcn(freqs,norm,phase,f0,Q,beta,delay_time):
+       yp=reflection_iq_shape_their(freqs,norm,phase,f0,Q,beta,delay_time)
+       yfit = repack_iq_data(np.real(yp),np.imag(yp))
+       return yfit
     bnd = ((0,-3.15,frequencies[0], Q_min, 0, -3e-5),(np.inf,3.15,frequencies[-1], Q_max, 10., 3e-5))
     ##bound for [norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
     #-3.15 to 3.15 constraint the phase; 3e-5 for delay_time means O(1)km distance
-    try:
-        par,pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
-    except:
-        raise ValueError("cannot do the reflection fit")
-        par = p0 
+    par, pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
     
     
     #calculate shape
-    fit_shape = fit_fcn(par) 
+    fit_shape = fit_fcn(frequencies,*par) 
     chisq=np.power((fit_shape-iq_data)/uncertainty,2)/len(frequencies)
     #TODO at this point change to dict
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
