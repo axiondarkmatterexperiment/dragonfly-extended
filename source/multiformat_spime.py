@@ -345,9 +345,9 @@ def fit_reflection(iq_data,frequencies):
     par, pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
     
     #calculate shape
-    fit_shape = fit_fcn(frequencies,par[0],par[1],par[2],par[3],par[4],par[5]) 
+    fit_shape = fit_fcn(frequencies,*par) 
     #fit_shape = fit_fcn(frequencies,*par) 
-    chisq=sum(np.power(np.abs(fit_shape-iq_data)/uncertainty,2))/len(frequencies)
+    chisq=sum(np.power(np.abs(fit_shape-np.array(iq_data))/uncertainty,2))/len(frequencies)
     #TODO at this point change to dict
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
     return [par[0],par[1],par[2],par[3],par[4],par[5],chisq,dip_depth,list(fit_shape)]
@@ -581,7 +581,6 @@ def reflection_calibration(data_object):
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
     fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,dip_depth,fit_shape=fit_reflection(data_object["iq_data"],freqs)
-    ##fit_shape = data_object["iq_data"]
     data_object["fit_norm"]=fit_norm
     data_object["fit_phase"]=fit_phase
     data_object["fit_f0"]=fit_f0
