@@ -345,8 +345,8 @@ def fit_reflection(iq_data,frequencies):
     par, pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
     
     #calculate shape
-    #fit_shape = fit_fcn(frequencies,par[0],par[1],par[2],par[3],par[4],par[5]) 
-    fit_shape = fit_fcn(frequencies,*par) 
+    fit_shape = fit_fcn(frequencies,par[0],par[1],par[2],par[3],par[4],par[5]) 
+    #fit_shape = fit_fcn(frequencies,*par) 
     chisq=sum(np.power(np.abs(fit_shape-iq_data)/uncertainty,2))/len(frequencies)
     #TODO at this point change to dict
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
