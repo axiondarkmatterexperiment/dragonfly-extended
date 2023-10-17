@@ -345,12 +345,12 @@ def fit_reflection(iq_data,frequencies):
     par, pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
     
     #calculate shape
-    fit_shape = fit_fcn(frequencies,par[0],par[1],par[2],par[3],par[4],par[5]) 
+    #fit_shape = fit_fcn(frequencies,par[0],par[1],par[2],par[3],par[4],par[5]) 
+    fit_shape = fit_fcn(frequencies,*par) 
     chisq=sum(np.power(np.abs(fit_shape-iq_data)/uncertainty,2))/len(frequencies)
-    return np.append(par,[chisq,0,dip_depth]) 
     #TODO at this point change to dict
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
-    return [par[0],par[1],par[2],par[3],par[4],par[5],chisq,fit_shape,dip_depth]
+    return [par[0],par[1],par[2],par[3],par[4],par[5],chisq,dip_depth,fit_shape]
 
 def sidecar_fit_transmission(powers, frequencies):
     """fits sidecar reflection data. For now, it is separate function from 
@@ -580,10 +580,7 @@ def reflection_calibration(data_object):
           }
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
-    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=fit_reflection(data_object["iq_data"],freqs)
-    #fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth = [0,0,0,0,0,0,0,0,0] 
-    fit_shape = data_object["iq_data"]
-    ##debug
+    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,dip_depth,fit_shape=fit_reflection(data_object["iq_data"],freqs)
     data_object["fit_norm"]=fit_norm
     data_object["fit_phase"]=fit_phase
     data_object["fit_f0"]=fit_f0
