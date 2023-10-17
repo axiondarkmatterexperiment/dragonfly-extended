@@ -117,7 +117,7 @@ def sc_guess_q(f, y, measurement_type):
         ind_fwhm = find_nearest_idx(left_y, C+dy/2)
         raise Exception("not a valid measurement type")
 
-    # find distance between fwhm and resonance
+    # fend distance between fwhm and resonance
     f1 = f[ind_fwhm]
     # guess bandwidth as twice that distance
     del_f = 2*(fc-f1)
@@ -348,9 +348,11 @@ def fit_reflection(iq_data,frequencies):
     bnd = ((0,-3.15,frequencies[0], Q_min, 0, -3e-5),(np.inf,3.15,frequencies[-1], Q_max, 10., 3e-5))
     ##bound for [norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
     #-3.15 to 3.15 constraint the phase; 3e-5 for delay_time means O(1)km distance
-    par = [0,0,0,0,0,0]
     try:
         par,pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
+    except:
+        raise ValueError("cannot do the reflection fit")
+        par = p0 
     
     
     #calculate shape
