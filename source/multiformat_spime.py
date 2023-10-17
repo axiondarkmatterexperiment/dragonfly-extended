@@ -335,7 +335,6 @@ def fit_reflection(iq_data,frequencies):
     delay_time_guess=0
     p0=[norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
     print("p0 is {}".format(p0))
-    return np.append(p0,[0,0,0]) 
     def fit_fcn(freqs,norm,phase,f0,Q,beta,delay_time):
        yp=reflection_iq_shape_their(freqs,norm,phase,f0,Q,beta,delay_time)
        yfit = repack_iq_data(np.real(yp),np.imag(yp))
@@ -344,6 +343,7 @@ def fit_reflection(iq_data,frequencies):
     ##bound for [norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
     #-3.15 to 3.15 constraint the phase; 3e-5 for delay_time means O(1)km distance
     par, pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
+    return np.append(par,[0,0,0]) 
     
     
     #calculate shape
