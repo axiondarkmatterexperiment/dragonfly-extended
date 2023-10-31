@@ -238,4 +238,4 @@ if __name__ == "__main__":
     
     waveform_generator = axion_waveform_sampler()
     SHM_waveform, freqs = waveform_generator.get_freq_spec()
-    print(f"SHM waveform {SHM_waveform}")
+    print("SHM waveform", SHM_waveform)
