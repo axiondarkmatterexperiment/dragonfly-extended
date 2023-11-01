@@ -322,13 +322,14 @@ class SAGCoordinator(dripline.core.Endpoint):
 
         return None
 
-    def dummy_message(self,N,b):
+    def dummy_message(self, **parameters):
         """
         Method for sending dummy message N items long with entries b bits each to the sag arb service
         Will send both in stringified and list formats
         """
-        b = int(b)
-        N = int(N)
+        logger.info('in dummy message')       
+        b = int(parameters['b'])
+        N = int(parameters['N'])
         Nlist = [2**b for i in range(N)]
         stringlist = ""
         for i,entry in enumerate(Nlist):
