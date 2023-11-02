@@ -337,12 +337,12 @@ class SAGCoordinator(dripline.core.Endpoint):
                 if i<N-1:
                     stringlist+=", "
         #print(stringlist)
-        values = [stringlist]
+        values = {"sag_dummy_message_0":stringlist}
         logger.info('sending dummy list string to SAG arb service')
         self._do_set_collection(self.dummy_message_sets, values)
         #self.provider.cmd('sag_arb','print_dummy_message',timeout=300)
         
-        values = [Nlist]
+        values = {"sag_dummy_message_0":Nlist}
         logger.info('sending explicit list to SAG arb service')
         self._do_set_collection(self.dummy_message_sets, values)
         #self.provider.cmd('sag_arb','print_dummy_message',timeout=300)
