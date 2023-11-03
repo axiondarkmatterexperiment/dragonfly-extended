@@ -186,7 +186,8 @@ class SAGCoordinator(dripline.core.Endpoint):
             bandwidth = self.f_stan*(self.N - self.n)
             aw = axion_waveform_lib.axion_waveform_sampler(line_shape=line_shape, f_rest=self.f_rest, f_spacing=self.f_stan, \
                      bandwidth = bandwidth)
-            spec, freqs = aw.get_freq_spec()
+            spec_short, freqs = aw.get_freq_spec()
+            spec[-len(spec_short):] = spec_short
             self.spectrum = list(spec)
             return None
 
