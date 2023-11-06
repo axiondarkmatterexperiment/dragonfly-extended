@@ -194,28 +194,24 @@ class SAGCoordinator(dripline.core.Endpoint):
         def spectrum2Timeseries():
             '''
             This function takes the designated spectral function and converts it into a time series.
-            As the input is a (power) spectral function, we accomplish this by taking the square root of the PSF, 
-            give it a phase (from a uniform random distribution) and perform an inverse FFT.
+            As the input is a (power) spectral function is considered as the output of an FFT, 
+            truncated for positive frequencies and then magnitude squared, we semi-invert this process
+            by taking the square root of the PSF, give it a phase (from a uniform random distribution),
+            extend its range to [ositive and negative frequencies and perform an inverse FFT.            
             '''
             N=np.size(self.spectrum)
-            print(N)
+            #print(N)
             sqrt_spectrum = np.sqrt(self.spectrum)
             phases = 0#np.random.uniform(low=0,high=2*np.pi,size=N)
-            amplitudes_posf = (sqrt_spectrum*np.exp(1j*phases))[0:N//2]
+            amplitudes_posf = (sqrt_spectrum*np.exp(1j*phases))
             amplitudes_negf = [np.conjugate(amp) for amp in amplitudes_posf]
             if N%2==0:
                 amps_conc = list(amplitudes_posf) + list(reversed(amplitudes_negf))
             else:
                 amps_conc = list(amplitudes_posf) + [0] + list(reversed(amplitudes_negf))
-            tseries=np.fft.ifft(amps_conc) 
-            #tseries_trunc = tseries
-            print(len(tseries))
-            #tseries=tseries.real 
-            
-            #re_tseries=np.zeros(self.N) 
-            
-            #for j in range(0,self.N):
-            #    re_tseries[j]=tseries[j-self.N//2] #rescaled
+            tseries_long=np.fft.ifft(amps_conc)
+            tseries = tseries_long[0:N] 
+            #print(len(tseries))
 
             self.re_tseries = list(tseries.real) # though it should be real already
             return None
