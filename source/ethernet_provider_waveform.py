@@ -8,7 +8,7 @@ class EthernetProviderWaveform(EthernetProvider):
     '''
     An EthernetProvider class for interacting with the arb (Agilent 33220A), particularly for handling long waveform messages passed the the waveforme generator
     '''
-    def __init__(self,write_waveform_prefix="DATA:DAC VOLATILE ",write_waveform_terminator=" \n",save_waveform_prefix="DATA:COPY ",save_waveform_terminator=", VOLATILE \n",**kwargs):
+    def __init__(self,write_waveform_prefix="DATA:DAC VOLATILE ",write_waveform_terminator="",save_waveform_prefix="DATA:COPY ",save_waveform_terminator="",**kwargs):
         '''
         Initialize EthernetProvider parent
 
@@ -35,7 +35,7 @@ class EthernetProviderWaveform(EthernetProvider):
         waveform_list = []
         for i in range(0,N_endpoints):
                 waveform_list.extend(store_waveform_endpoints['sag_arb_store_waveform_'+str(i)].get_value())
-        waveform_string = ', '.join([str(val) for val in waveform_list])
+        waveform_string = ', '.join([str(val) for val in waveform_list[0:2]]) #shortened to only first two elements
         write_waveform_cmd_string = self.write_waveform_prefix + waveform_string + self.write_waveform_terminator
         # execute send from EthernetProvider for waveform write to arb volitile memory   
         self.send(write_waveform_cmd_string, **parameters)
