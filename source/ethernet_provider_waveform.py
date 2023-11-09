@@ -35,7 +35,7 @@ class EthernetProviderWaveform(EthernetProvider):
         waveform_list = []
         for i in range(0,N_endpoints):
                 waveform_list.extend(store_waveform_endpoints['sag_arb_store_waveform_'+str(i)].get_value())
-        waveform_string = ', '.join([str(val) for val in waveform_list[0:2]]) #shortened to only first two elements
+        waveform_string = ', '.join([str(val) for val in waveform_list]) #shortened to only first two elements
         write_waveform_cmd_string = self.write_waveform_prefix + waveform_string + self.write_waveform_terminator
         # execute send from EthernetProvider for waveform write to arb volitile memory   
         self.send(write_waveform_cmd_string, **parameters)
