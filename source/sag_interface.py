@@ -278,12 +278,18 @@ class SAGCoordinator(dripline.core.Endpoint):
             
             msg2="FREQ 50 \n" #set frequency [Hz]
             s.send(msg2.encode()) # message needs to be encoded as a byte string
-
+            resp = s.recv(BUFFER_SIZE)
+            logger.info(string(resp.decode()))
+            
             s.send(msg3.encode()) #sends tscaled to the socket
+            resp = s.recv(BUFFER_SIZE)
+            logger.info(string(resp.decode()))
             
             #self.waveform_name = 'MY_AXION4'
             msg="DATA:COPY "+str(self.sag_arb_waveform_name)+"\n" #this saves the name of the line shape to long term memory
             s.send(msg.encode())
+            resp = s.recv(BUFFER_SIZE)
+            logger.info(string(resp.decode()))
             logger.info("messages passed to arb")
             s.close()
             return None
