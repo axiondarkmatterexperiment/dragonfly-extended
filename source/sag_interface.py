@@ -168,13 +168,16 @@ class SAGCoordinator(dripline.core.Endpoint):
             This function generates the spectral distribution function of the axion waveform due to the distribution of 
             kinetic energy in the axion field as measured in the experiment's laboratory frame (taken from the supplied 
             keyword arguments to update_waveform).
+            The length of entries the power spectrum is half the length allowed by the arb, so that the IFFT'd time 
+            series will be of the proper length. Similar story for the bandwith of the retrieved spectrum.
             Four line shapes are supported:
             max_2017 = N-body maxwellian form from Lentz et al. 2017
             big_flows = Caustic ring flows (n=4?) from Pierre Sikivie halo model
             bose_nbody_2020 = Bose N-body halo model from Lentz et al. 2020
             maxwellian = isothermal sphere halo model form from Turner et al. 1990
             '''
-            spec=np.zeros(self.N)
+            spec=np.zeros(self.N//2)
+            bandwidth = self.f_stan*(self.N - self.n)/2
             if ("body" or "2017" or "max") in self.line_shape.lower():
                 line_shape = 'n-body'
             elif ("flow" or "big" or "sikivie") in self.line_shape.lower():
@@ -183,7 +186,6 @@ class SAGCoordinator(dripline.core.Endpoint):
                 line_shape = 'bose_nbody_2020'
             else:  # maxwellian
                 line_shape = 'SHM'
-            bandwidth = self.f_stan*(self.N - self.n)
             aw = axion_waveform_lib.axion_waveform_sampler(line_shape=line_shape, f_rest=self.f_rest, f_spacing=self.f_stan, \
                      bandwidth = bandwidth)
             spec_short, freqs = aw.get_freq_spec()
@@ -196,22 +198,19 @@ class SAGCoordinator(dripline.core.Endpoint):
             This function takes the designated spectral function and converts it into a time series.
             As the input is a (power) spectral function is considered as the output of an FFT, 
             truncated for positive frequencies and then magnitude squared, we semi-invert this process
-            by taking the square root of the PSF, give it a phase (from a uniform random distribution),
-            extend its range to [ositive and negative frequencies and perform an inverse FFT.            
+            by taking the square root of the PSF, give it a phase, conjugate-wise
+            extend its range to positive and negative frequencies and perform an inverse FFT, which should be real valued.            
             '''
-            N=np.size(self.spectrum)
+            N=self.N
             #print(N)
             sqrt_spectrum = np.sqrt(self.spectrum)
-            phases = 0#np.random.uniform(low=0,high=2*np.pi,size=N)
+            phases = 0.0 #np.random.uniform(low=0,high=2*np.pi,size=N)
             amplitudes_posf = (sqrt_spectrum*np.exp(1j*phases))
             amplitudes_negf = [np.conjugate(amp) for amp in amplitudes_posf]
-            if N%2==0:
-                amps_conc = list(amplitudes_posf) + list(reversed(amplitudes_negf))
-            else:
-                amps_conc = list(amplitudes_posf) + [0] + list(reversed(amplitudes_negf))
-            tseries_long=np.fft.ifft(amps_conc)
-            tseries = tseries_long[0:N] 
-            #print(len(tseries))
+            amps_conc = list(amplitudes_posf) + list(reversed(amplitudes_negf))
+            self.tseries_long=np.fft.ifft(amps_conc)
+            tseries = self.tseries_long[0:N] 
+            print(len(tseries))
 
             self.re_tseries = list(tseries.real) # though it should be real already
             return None
@@ -278,12 +277,18 @@ class SAGCoordinator(dripline.core.Endpoint):
             
             msg2="FREQ 50 \n" #set frequency [Hz]
             s.send(msg2.encode()) # message needs to be encoded as a byte string
-
+            resp = s.recv(BUFFER_SIZE)
+            logger.info(string(resp.decode()))
+            
             s.send(msg3.encode()) #sends tscaled to the socket
+            resp = s.recv(BUFFER_SIZE)
+            logger.info(string(resp.decode()))
             
             #self.waveform_name = 'MY_AXION4'
             msg="DATA:COPY "+str(self.sag_arb_waveform_name)+"\n" #this saves the name of the line shape to long term memory
             s.send(msg.encode())
+            resp = s.recv(BUFFER_SIZE)
+            logger.info(string(resp.decode()))
             logger.info("messages passed to arb")
             s.close()
             return None
