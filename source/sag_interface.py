@@ -204,12 +204,12 @@ class SAGCoordinator(dripline.core.Endpoint):
             N=self.N
             #print(N)
             sqrt_spectrum = np.sqrt(self.spectrum)
-            phases = 0.0 #np.random.uniform(low=0,high=2*np.pi,size=N)
+            phases = 0.0 #0.0 #np.random.uniform(low=0,high=2*np.pi,size=N)
             amplitudes_posf = (sqrt_spectrum*np.exp(1j*phases))
             amplitudes_negf = [np.conjugate(amp) for amp in amplitudes_posf]
             amps_conc = list(amplitudes_posf) + list(reversed(amplitudes_negf))
             self.tseries_long=np.fft.ifft(amps_conc)
-            tseries = self.tseries_long[0:N] 
+            tseries = np.roll(self.tseries_long,self.N//2) # rolling highest amplitude region of time series to center to minimize discontinuities between endpoints
             print(len(tseries))
 
             self.re_tseries = list(tseries.real) # though it should be real already
