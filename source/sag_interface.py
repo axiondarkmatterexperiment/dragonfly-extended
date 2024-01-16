@@ -58,7 +58,7 @@ class SAGCoordinator(dripline.core.Endpoint):
         self.f_rest = f_rest
         self.line_shape = line_shape
         self.N = 65536
-        self.n = 65000
+        self.n = 60000
         self.h = consts.Planck #J/Hz
         self.h_eV = consts.physical_constants['Planck constant in eV s'][0] #eV/Hz
         self.eV = consts.physical_constants['joule-electron volt relationship'][0] #6.24e18
