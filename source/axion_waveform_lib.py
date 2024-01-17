@@ -156,10 +156,12 @@ class axion_waveform_sampler():
         vbPlus = np.linalg.norm(vboost+vMeanBose)
         lobePlus = np.array([2*(betaBose/np.pi)**(0.5)/vbPlus*np.sinh(2*betaBose*np.sqrt(2*E)*vbPlus)*np.exp(-2*E*betaBose-betaBose*vbPlus**2) \
                          if E>=0.0 else 0.0 for E in Es])
+        lobePlus = np.array([0.0 if np.isnan(val) else val for val in lobePlus])
         lobePlus = self.normShape(lobePlus)
         vbMinus = np.linalg.norm(vboost-vMeanBose)
         lobeMinus=np.array([2*(betaBose/np.pi)**(0.5)/vbMinus*np.sinh(2*betaBose*np.sqrt(2*E)*vbMinus)*np.exp(-2*E*betaBose-betaBose*vbMinus**2) \
                          if E>=0.0 else 0.0 for E in Es])
+        lobeMinus = np.array([0.0 if np.isnan(val) else val for val in lobeMinus])
         lobeMinus = self.normShape(lobeMinus)
         BoseLobe = 0.25*(lobePlus + lobeMinus) # normalized Bose lobe feature, assuming two radial velocity contributions and lobes are well separated 
         
