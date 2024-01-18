@@ -83,6 +83,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
             this_value = set_str
             if '{' in set_str and '}' in set_str:
+                logger.debug('replacing from {} with something from {}'.format(set_str, values))
                 try:
                     this_set = set_str.format(**values)
                 except KeyError as e:
