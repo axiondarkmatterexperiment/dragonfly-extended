@@ -77,28 +77,41 @@ class SAGCoordinator(dripline.core.Endpoint):
         # first parse all string evaluations, make sure they all work before doing any actual setting
         for a_calculated_set in these_sets:
             logger.debug("dealing with calculated_set: {}".format(a_calculated_set))
-            if len(a_calculated_set) > 1:
-                raise dripline.core.DriplineValueError('all calculated sets must be a single entry dict')
-            [(this_endpoint,set_str)] = six.iteritems(a_calculated_set)
-            logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
-            this_value = set_str
-            if '{' in set_str and '}' in set_str:
-                logger.debug('replacing from {} with something from {}'.format(set_str, values))
-                try:
-                    this_set = set_str.format(**values)
-                except KeyError as e:
-                    raise dripline.core.DriplineValueError("required parameter, <{}>, not provided".format(e.message))
-                logger.debug('substitutions make that RHS = {}'.format(this_set))
-                this_value = self.evaluator(this_set)
-                logger.debug('or a set value of {}'.format(this_value))
-            set_list.append((this_endpoint, this_value))
+            set_list.append(self._process_calculated_set(values, **a_calculated_set))
         # now actually try to set things
         for this_endpoint, this_value in set_list:
             #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
             logger.info("setting endpoint '"+str(this_endpoint)+"' with value: "+str(this_value)) 
             self.provider.set(this_endpoint, this_value)
             
-
+    def _process_calculated_set(self, values, evaluate_statement=True, **kwargs):
+        """
+        Deals with any processing needed to evaluate a single set out of a set collection
+        """
+        if len(kwargs) != 1:
+            raise dripline.core.DriplineValueError('kwargs should only be a single entry dict')
+        [(this_endpoint,set_str)] = six.iteritems(kwargs)
+        logger.debug('trying to understand: {}->{}'.format(this_endpoint, set_str))
+        this_value = set_str
+        if '{' in set_str and '}' in set_str:
+            logger.debug('replacing from {} with something from {}'.format(set_str, values))
+            try:
+                this_set = set_str.format(**values)
+            except KeyError as e:
+                raise dripline.core.DriplineValueError("required parameter, <{}>, not provided".format(e.message))
+            logger.debug('substitutions make that RHS = {}'.format(this_set))
+            if evaluate_statement:
+                this_value = self.evaluator(this_set)
+                # Handle an evaluation error
+                if len(self.evaluator.error) > 0:
+                    error_msg = 'Error in evaluating substituted value'
+                    for err in self.evaluator.error:
+                        error_msg += ': (' + err.get_error()[0] + ') ' + err.get_error()[1]
+                    raise dripline.core.DriplineValueError(error_msg)
+            else:
+                this_value = this_set
+            logger.debug('or a set value of {}'.format(this_value))
+            return (this_endpoint, this_value)
 
     #def _do_log_noset_sensors(self):
     def _do_extra_logs(self, sensors_list):
@@ -148,10 +161,10 @@ class SAGCoordinator(dripline.core.Endpoint):
         parameters: (dict) - keyworded arguments are available to all sensors as named substitutions when calibrating
         '''
         logger.info('in configure injection')
-        # set to state 'sag' (which enables output)
-        self.update_state("sag")
         # to extra sets calculated from input parameters
         self._do_set_collection(self.sag_injection_sets, parameters)
+        # set to state 'sag' (which enables output)
+        self.update_state("sag")
 
     def update_waveform(self, **parameters):
         '''
