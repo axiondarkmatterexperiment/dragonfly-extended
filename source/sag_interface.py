@@ -79,6 +79,7 @@ class SAGCoordinator(dripline.core.Endpoint):
             logger.debug("dealing with calculated_set: {}".format(a_calculated_set))
             set_list.append(self._process_calculated_set(values, **a_calculated_set))
         # now actually try to set things
+        logger.debug("set list: {}".format(set_list))
         for this_endpoint, this_value in set_list:
             #logger.info("if I weren't a jerk, I'd do:\n{} -> {}".format(this_endpoint, this_value))
             logger.info("setting endpoint '"+str(this_endpoint)+"' with value: "+str(this_value)) 
