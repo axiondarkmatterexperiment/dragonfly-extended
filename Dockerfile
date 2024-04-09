@@ -14,8 +14,9 @@ RUN sed -i -e 's/deb.debian.org/archive.debian.org/g' \
            -e '/stretch-updates/d' /etc/apt/sources.list &&\
     apt-get update &&\
     apt-get install -y python3-scipy
-RUN if (uname -a | grep arm); then pip3 install --upgrade setuptools ; fi
-RUN if (uname -a | grep arm); then pip3 install RPi.GPIO Adafruit_ADS1x15 ; fi
+RUN if (uname -a | grep arm); then install_for_sag.sh; fi
+#RUN if (uname -a | grep arm); then pip3 install --upgrade setuptools ; fi
+#RUN if (uname -a | grep arm); then pip3 install RPi.GPIO Adafruit_ADS1x15 ; fi
 # adding local src directory to pythonpath to simplify imports
 ENV PYTHONPATH="${PYTHONPATH}:usr/local/src"
 # going to try just installing this, if we need to carefully only include it in arm installs we'll figure that out later
