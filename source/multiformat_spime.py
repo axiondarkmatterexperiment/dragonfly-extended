@@ -330,7 +330,7 @@ def fit_reflection(iq_data,frequencies):
     #make a guess at the overall phase and phase slope of the whole thing
     left_phase=complex(-iq_data[0],-iq_data[1])
     right_phase=complex(-iq_data[-2],-iq_data[-1])
-    phase_guess=0.5*(cmath.phase(left_phase)+cmath.phase(right_phase))
+    phase_guess=(cmath.phase(left_phase)+cmath.phase(right_phase))
     # delay_time_guess=-(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
     delay_time_guess=0
     p0=[norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
@@ -339,7 +339,7 @@ def fit_reflection(iq_data,frequencies):
        yp=reflection_iq_shape_their(freqs,norm,phase,f0,Q,beta,delay_time)
        yfit = repack_iq_data(np.real(yp),np.imag(yp))
        return yfit
-    bnd = ((0,-3.15,frequencies[0], Q_min, 0, -3e-5),(np.inf,3.15,frequencies[-1], Q_max, 10., 3e-5))
+    bnd = ((0,-np.pi,frequencies[0], Q_min, 0, -3e-5),(np.inf,np.pi,frequencies[-1], Q_max, 10., 3e-5))
     ##bound for [norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
     #-3.15 to 3.15 constraint the phase; 3e-5 for delay_time means O(1)km distance
     par, pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
