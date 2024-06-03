@@ -117,7 +117,7 @@ def sc_guess_q(f, y, measurement_type):
         ind_fwhm = find_nearest_idx(left_y, C+dy/2)
         raise Exception("not a valid measurement type")
 
-    # find distance between fwhm and resonance
+    # fend distance between fwhm and resonance
     f1 = f[ind_fwhm]
     # guess bandwidth as twice that distance
     del_f = 2*(fc-f1)
@@ -217,13 +217,14 @@ def reflection_iq_shape(f,norm,phase,f0,Q,beta,delay_time):
     phase=cmath.exp(complex(0,phase+delay_time*(f-f0)))
     return response*phase
 
+
 def reflection_iq_shape_their(f,norm,phase,f0,Q,beta,delay_time):
     """returns the expected [i,q] values from a reflection measurement
          """
-    Q_0 = Q*(1+beta) ## Convert to Unloaded Q-factor (Q_0) from Loaded Q-factor (Q)
+    Q_0 = Q*(1.+beta) ## Convert to Unloaded Q-factor (Q_0) from Loaded Q-factor (Q)
     delta=Q_0*(f-f0)/f0
-    phase=np.exp(complex(0,phase+delay_time*(f-f0)))
-    return norm*phase*(beta-1-complex(0,2*delta))/(beta+1+complex(0,2*delta))
+    phase=np.exp(1.j*(phase+delay_time*(f-f0)))
+    return norm*phase*(beta-1.-1.j*(2.*delta))/(beta+1.+1.j*(2.*delta))
 
 
 def fit_transmission(powers,frequencies):
@@ -329,67 +330,27 @@ def fit_reflection(iq_data,frequencies):
     #make a guess at the overall phase and phase slope of the whole thing
     left_phase=complex(-iq_data[0],-iq_data[1])
     right_phase=complex(-iq_data[-2],-iq_data[-1])
-    phase_guess=cmath.phase(left_phase+right_phase)
+    phase_guess= cmath.phase(left_phase+ right_phase)
     # delay_time_guess=-(cmath.phase(right_phase)-cmath.phase(left_phase))/f_band
     delay_time_guess=0
     p0=[norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
     print("p0 is {}".format(p0))
-    def fit_fcn(x):
-        #calculate the residuals of the fit as an array
-        nfreq=2*len(frequencies)
-        npriors=4
-        norm=x[0]
-        phase=x[1]
-        f0=x[2]
-        Q=x[3]
-        beta=x[4]
-        delay_time=x[5]
-        resid=np.zeros(nfreq+npriors)
-        #Prior 1: frequencie must be within bounds
-        if f0<frequencies[0]:
-            resid[nfreq]=(f0-frequencies[0])/f0_guess
-            f0=frequencies[0]
-        if f0>frequencies[-1]:
-            resid[nfreq]=(frequencies[-1]-f0)/f0_guess
-            f0=frequencies[-1]
-        #Prior 2: Q must be neither too small nor too large
-        if Q<Q_min:
-            resid[nfreq+1]=nfreq*10*(Q-Q_min)/Q_min
-            Q=Q_min
-        if Q>Q_max:
-            resid[nfreq+1]=nfreq*10*(Q-Q_max)/Q_min
-            Q=Q_max
-        #Prior 3: beta is between 0 and 10
-        if beta<0:
-            resid[nfreq+2]=nfreq*10*beta
-            beta=0
-        if beta>10:
-            resid[nfreq+2]=nfreq*10*(beta-10)
-            beta=10
-        #Prior 4: delay_time is positive and small
-        if delay_time<0:
-            resid[nfreq+3]=-delay_time
-            delay_time=0
-        max_delay_time=3e-5 #this corresponds to nearly a kilometer of cable
-        if delay_time>3.0e-5: 
-            resid[nfreq+3]=max_delay_time-delay_time
-            delay_time=max_delay_time
-        for i in range(int(nfreq/2)):
-            yp=reflection_iq_shape_their(frequencies[i],norm,phase,f0,Q,beta,delay_time)
-            resid[2*i]=(yp.real-iq_data[2*i])/uncertainty
-            resid[2*i+1]=(yp.imag-iq_data[2*i+1])/uncertainty
-        return resid
-    res=least_squares(fit_fcn,p0,xtol=1e-14)
-    chisq=res.cost/len(powers)
+    def fit_fcn(freqs,norm,phase,f0,Q,beta,delay_time):
+       yp=reflection_iq_shape_their(freqs,norm,phase,f0,Q,beta,delay_time)
+       yfit = repack_iq_data(np.real(yp),np.imag(yp))
+       return yfit
+    bnd = ((0,-np.pi,frequencies[0], Q_min, 0, -5e-5),(np.inf,np.pi,frequencies[-1], Q_max, 10., 5e-5))
+    ##bound for [norm_guess,phase_guess,f0_guess,Q_guess,beta_guess,delay_time_guess]
+    #-3.15 to 3.15 constraint the phase; 3e-5 for delay_time means O(1)km distance
+    par, pcov = curve_fit(fit_fcn,xdata = frequencies, ydata = iq_data, p0 =  p0, bounds = bnd, sigma = uncertainty*np.ones(len(iq_data)))
+    
     #calculate shape
-    fit_shape=[]
-    for i in range(len(frequencies)):
-        yp=reflection_iq_shape_their(frequencies[i],res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5])
-        fit_shape.append(yp.real)
-        fit_shape.append(yp.imag)
+    fit_shape = fit_fcn(frequencies,*par) 
+    #fit_shape = fit_fcn(frequencies,*par) 
+    chisq=sum(np.power(np.abs(fit_shape-np.array(iq_data))/uncertainty,2))/len(frequencies)
     #TODO at this point change to dict
     #return norm,phase,f0,Q,beta,delay_time,chi-square of fit
-    return [res.x[0],res.x[1],res.x[2],res.x[3],res.x[4],res.x[5],chisq,fit_shape,dip_depth]
+    return [par[0],par[1],par[2],par[3],par[4],par[5],chisq,dip_depth,list(fit_shape)]
 
 def sidecar_fit_transmission(powers, frequencies):
     """fits sidecar reflection data. For now, it is separate function from 
@@ -619,7 +580,7 @@ def reflection_calibration(data_object):
           }
     """
     freqs=np.linspace(data_object["start_frequency"],data_object["stop_frequency"],int(len(data_object["iq_data"])/2))
-    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,fit_shape,dip_depth=fit_reflection(data_object["iq_data"],freqs)
+    fit_norm,fit_phase,fit_f0,fit_Q,fit_beta,fit_delay_time,fit_chisq,dip_depth,fit_shape=fit_reflection(data_object["iq_data"],freqs)
     data_object["fit_norm"]=fit_norm
     data_object["fit_phase"]=fit_phase
     data_object["fit_f0"]=fit_f0
